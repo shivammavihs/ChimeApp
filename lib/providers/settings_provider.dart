@@ -1,0 +1,147 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// ---------------------------------------------------------------------------
+// Keys
+// ---------------------------------------------------------------------------
+const _kIntervalMinutes = 'interval_minutes';
+const _kIntervalSeconds = 'interval_seconds';
+const _kTotalReps = 'total_reps';
+
+// ---------------------------------------------------------------------------
+// SharedPreferences singleton provider
+// ---------------------------------------------------------------------------
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError('Override in ProviderScope');
+});
+
+// ---------------------------------------------------------------------------
+// Interval minutes (1–60)
+// ---------------------------------------------------------------------------
+final intervalMinutesProvider = StateNotifierProvider<IntSettingNotifier, int>(
+  (ref) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return IntSettingNotifier(
+      prefs: prefs,
+      key: _kIntervalMinutes,
+      defaultValue: 3,
+      min: 0,
+      max: 60,
+    );
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Interval seconds (0–59) – fine-grained control within the minute
+// ---------------------------------------------------------------------------
+final intervalSecondsProvider =
+    StateNotifierProvider<IntSettingNotifier, int>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return IntSettingNotifier(
+    prefs: prefs,
+    key: _kIntervalSeconds,
+    defaultValue: 0,
+    min: 0,
+    max: 59,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Total repetitions (1–99)
+// ---------------------------------------------------------------------------
+final totalRepsProvider = StateNotifierProvider<IntSettingNotifier, int>(
+  (ref) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return IntSettingNotifier(
+      prefs: prefs,
+      key: _kTotalReps,
+      defaultValue: 5,
+      min: 1,
+      max: 99,
+    );
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Derived: total interval in seconds
+// ---------------------------------------------------------------------------
+final intervalSecondsTotal = Provider<int>((ref) {
+  final m = ref.watch(intervalMinutesProvider);
+  final s = ref.watch(intervalSecondsProvider);
+  final total = m * 60 + s;
+  return total < 1 ? 1 : total;
+});
+
+// ---------------------------------------------------------------------------
+// Generic integer setting notifier
+// ---------------------------------------------------------------------------
+class IntSettingNotifier extends StateNotifier<int> {
+  IntSettingNotifier({
+    required SharedPreferences prefs,
+    required String key,
+    required int defaultValue,
+    required int min,
+    required int max,
+  })  : _prefs = prefs,
+        _key = key,
+        _min = min,
+        _max = max,
+        super(prefs.getInt(key) ?? defaultValue);
+
+  final SharedPreferences _prefs;
+  final String _key;
+  final int _min;
+  final int _max;
+
+  void increment() => _set(state + 1);
+  void decrement() => _set(state - 1);
+  void set(int value) => _set(value);
+
+  void _set(int value) {
+    final clamped = value.clamp(_min, _max);
+    if (clamped == state) return;
+    state = clamped;
+    _prefs.setInt(_key, clamped);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Custom Chime Sound Path Persistence
+// ---------------------------------------------------------------------------
+const _kCustomChimeSoundPath = 'custom_chime_sound_path';
+
+final customChimeSoundPathProvider =
+    StateNotifierProvider<StringSettingNotifier, String?>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return StringSettingNotifier(
+    prefs: prefs,
+    key: _kCustomChimeSoundPath,
+    defaultValue: null,
+  );
+});
+
+class StringSettingNotifier extends StateNotifier<String?> {
+  StringSettingNotifier({
+    required SharedPreferences prefs,
+    required String key,
+    String? defaultValue,
+  })  : _prefs = prefs,
+        _key = key,
+        super(prefs.getString(key) ?? defaultValue);
+
+  final SharedPreferences _prefs;
+  final String _key;
+
+  void set(String? value) {
+    if (value == state) return;
+    state = value;
+    if (value == null) {
+      _prefs.remove(_key);
+    } else {
+      _prefs.setString(_key, value);
+    }
+  }
+
+  void clear() => set(null);
+}
+

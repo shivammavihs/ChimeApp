@@ -1,0 +1,49 @@
+name: chime_app
+description: "A premium productivity timer that fires an auditory chime at user-defined intervals."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Audio playback
+  audioplayers: ^6.1.0
+
+
+  # Persistence
+  shared_preferences: ^2.3.5
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Native File Picker & App Paths
+  file_picker: ^8.1.7
+  path_provider: ^2.1.5
+
+  # Background Services & Notifications
+  flutter_background_service: ^5.0.7
+  flutter_local_notifications: ^17.2.2
+  permission_handler: ^11.3.1
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/audio/chime.mp3
+    - assets/audio/chime.wav
