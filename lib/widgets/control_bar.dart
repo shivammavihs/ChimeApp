@@ -182,14 +182,14 @@ class _StartButtonState extends State<_StartButton>
                   height: scale.sp(76),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF090D1C), // deep dark blue-grey
+                    color: AppColors.isDark ? const Color(0xFF090D1C) : Colors.white, // premium adapts to light/dark
                     border: Border.all(
                       color: AppColors.accent,
                       width: 1.5 * scale.scaleFactor,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.accent.withValues(alpha: 0.35),
+                        color: AppColors.accent.withValues(alpha: AppColors.isDark ? 0.35 : 0.15),
                         blurRadius: _glow.value * scale.scaleFactor,
                         spreadRadius: 0.5 * scale.scaleFactor,
                       ),
@@ -198,7 +198,7 @@ class _StartButtonState extends State<_StartButton>
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.play_arrow_rounded,
-                    color: Colors.white,
+                    color: AppColors.isDark ? Colors.white : AppColors.primary,
                     size: scale.sp(38),
                   ),
                 ),
@@ -207,7 +207,7 @@ class _StartButtonState extends State<_StartButton>
                 Text(
                   'START',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.isDark ? Colors.white.withValues(alpha: 0.9) : AppColors.primary,
                     fontSize: scale.sp(12),
                     fontWeight: FontWeight.w600,
                     letterSpacing: scale.w(6.0),

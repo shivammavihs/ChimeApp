@@ -147,7 +147,7 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
           const SizedBox(width: 8),
           IconButton(
             onPressed: _saveAndToggle,
-            icon: const Icon(
+            icon: Icon(
               Icons.check_circle_rounded,
               color: AppColors.primaryLight,
               size: 28,

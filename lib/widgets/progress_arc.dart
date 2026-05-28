@@ -79,7 +79,7 @@ class _ArcPainter extends CustomPainter {
       ..shader = SweepGradient(
         startAngle: -math.pi / 2,
         endAngle: -math.pi / 2 + sweepAngle,
-        colors: const [
+        colors: [
           AppColors.primary,
           AppColors.primaryLight,
           AppColors.accent,

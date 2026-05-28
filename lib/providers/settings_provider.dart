@@ -145,3 +145,39 @@ class StringSettingNotifier extends StateNotifier<String?> {
   void clear() => set(null);
 }
 
+// ---------------------------------------------------------------------------
+// Theme mode persistence
+// ---------------------------------------------------------------------------
+const _kIsDarkMode = 'is_dark_mode';
+
+final isDarkModeProvider = StateNotifierProvider<BoolSettingNotifier, bool>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return BoolSettingNotifier(
+    prefs: prefs,
+    key: _kIsDarkMode,
+    defaultValue: true,
+  );
+});
+
+class BoolSettingNotifier extends StateNotifier<bool> {
+  BoolSettingNotifier({
+    required SharedPreferences prefs,
+    required String key,
+    required bool defaultValue,
+  })  : _prefs = prefs,
+        _key = key,
+        super(prefs.getBool(key) ?? defaultValue);
+
+  final SharedPreferences _prefs;
+  final String _key;
+
+  void toggle() => set(!state);
+
+  void set(bool value) {
+    if (value == state) return;
+    state = value;
+    _prefs.setBool(_key, value);
+  }
+}
+
+

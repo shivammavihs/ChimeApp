@@ -6,41 +6,49 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const background = Color(0xFF000000);
-  static const surfaceGlass = Color(0x0FFFFFFF); // ~6% white
-  static const primary = Color(0xFF2B5CE6); // cobalt blue
-  static const primaryLight = Color(0xFF4F8EF7); // bright cobalt
-  static const accent = Color(0xFF6BA3FF);
-  static const borderGlass = Color(0x1FFFFFFF); // ~12% white
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textMuted = Color(0x73FFFFFF); // ~45% white
-  static const textDisabled = Color(0x40FFFFFF); // ~25% white
-  static const chimeFlash = Color(0xFF4F8EF7);
-  static const success = Color(0xFF34C770);
-  static const arcTrack = Color(0x26FFFFFF); // ~15% white
+  static bool isDark = true;
+
+  static Color get background => isDark ? const Color(0xFF030611) : const Color(0xFFF4F6FC);
+  static Color get surfaceGlass => isDark ? const Color(0x0FFFFFFF) : const Color(0x0D000000); // ~6% white in dark, ~5% black in light
+  static Color get primary => isDark ? const Color(0xFF2B5CE6) : const Color(0xFF1B4DC6); // cobalt blue
+  static Color get primaryLight => isDark ? const Color(0xFF4F8EF7) : const Color(0xFF336FD3); // bright cobalt
+  static Color get accent => isDark ? const Color(0xFF6BA3FF) : const Color(0xFF2B5CE6);
+  static Color get borderGlass => isDark ? const Color(0x1FFFFFFF) : const Color(0x16000000); // ~12% white in dark, ~9% black in light
+  static Color get textPrimary => isDark ? const Color(0xFFFFFFFF) : const Color(0xFF030611);
+  static Color get textMuted => isDark ? const Color(0x73FFFFFF) : const Color(0x7F000000); // ~45% white in dark, ~50% black in light
+  static Color get textDisabled => isDark ? const Color(0x40FFFFFF) : const Color(0x40000000); // ~25% white in dark, ~25% black in light
+  static Color get chimeFlash => isDark ? const Color(0xFF4F8EF7) : const Color(0xFF2B5CE6);
+  static Color get success => isDark ? const Color(0xFF34C770) : const Color(0xFF24A351);
+  static Color get arcTrack => isDark ? const Color(0x26FFFFFF) : const Color(0x19000000); // ~15% white in dark, ~10% black in light
 
   // Premium colors from screenshot
-  static const startButton = Color(0xFF7EB0D5); // warm sky-blue for start
-  static const presetBg = Color(0xFF2C1E30); // dark plum/eggplant
-  static const selectedItem = Color(0xFF8AB4F8); // light blue selected numbers
-  static const unselectedItem = Color(0xFF6E6070); // muted unselected numbers
-  static const labelMuted = Color(0xFF9E8F9A); // soft mauve label color
-  static const navBarBg = Color(0x19FFFFFF); // glassmorphic bottom nav bar
+  static Color get startButton => isDark ? const Color(0xFF7EB0D5) : const Color(0xFF3B6E8C); // warm sky-blue for start
+  static Color get presetBg => isDark ? const Color(0xFF2C1E30) : const Color(0xFFF2EAF3); // dark plum/eggplant -> pastel plum
+  static Color get selectedItem => isDark ? const Color(0xFF8AB4F8) : const Color(0xFF1B4DC6); // light blue selected numbers
+  static Color get unselectedItem => isDark ? const Color(0xFF6E6070) : const Color(0xFFA592A7); // muted unselected numbers
+  static Color get labelMuted => isDark ? const Color(0xFF9E8F9A) : const Color(0xFF7E6B7B); // soft mauve label color
+  static Color get navBarBg => isDark ? const Color(0x19FFFFFF) : const Color(0x12000000); // glassmorphic bottom nav bar
 }
 
 // ---------------------------------------------------------------------------
 // App-level ThemeData
 // ---------------------------------------------------------------------------
 ThemeData buildAppTheme() {
-  final base = ThemeData.dark(useMaterial3: true);
+  final isDark = AppColors.isDark;
+  final base = isDark ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
 
   return base.copyWith(
     scaffoldBackgroundColor: AppColors.background,
-    colorScheme: const ColorScheme.dark(
-      brightness: Brightness.dark,
+    colorScheme: ColorScheme(
+      brightness: isDark ? Brightness.dark : Brightness.light,
       primary: AppColors.primary,
+      onPrimary: isDark ? Colors.white : Colors.black,
       secondary: AppColors.primaryLight,
+      onSecondary: isDark ? Colors.white : Colors.black,
+      error: Colors.red,
+      onError: Colors.white,
       surface: AppColors.background,
+      onSurface: AppColors.textPrimary,
     ),
     textTheme: _buildTextTheme(base.textTheme),
     splashFactory: NoSplash.splashFactory,
@@ -52,21 +60,21 @@ TextTheme _buildTextTheme(TextTheme base) {
   // Use the default system font family (sans-serif) for clean modern readability
   return base.copyWith(
     // Massive countdown digits
-    displayLarge: const TextStyle(
+    displayLarge: TextStyle(
       fontSize: 90,
       fontWeight: FontWeight.w200, // ultra-thin elegance
       color: AppColors.textPrimary,
       letterSpacing: -2.0,
       height: 1.0,
     ),
-    displayMedium: const TextStyle(
+    displayMedium: TextStyle(
       fontSize: 70,
       fontWeight: FontWeight.w200,
       color: AppColors.textPrimary,
       letterSpacing: -1.5,
       height: 1.0,
     ),
-    displaySmall: const TextStyle(
+    displaySmall: TextStyle(
       fontSize: 44,
       fontWeight: FontWeight.w200,
       color: AppColors.textPrimary,
@@ -74,27 +82,27 @@ TextTheme _buildTextTheme(TextTheme base) {
       height: 1.0,
     ),
     // Subtitle / rep counter
-    headlineMedium: const TextStyle(
+    headlineMedium: TextStyle(
       fontSize: 22,
       fontWeight: FontWeight.w300,
       color: AppColors.labelMuted,
       letterSpacing: 0.5,
     ),
-    headlineSmall: const TextStyle(
+    headlineSmall: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w300,
       color: AppColors.labelMuted,
       letterSpacing: 0.4,
     ),
     // Stepper labels (e.g. Hours, Minutes, Seconds)
-    titleMedium: const TextStyle(
+    titleMedium: TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.w600,
       color: AppColors.labelMuted,
       letterSpacing: 2.0, // clean track uppercase label look
     ),
     // Stepper values
-    titleLarge: const TextStyle(
+    titleLarge: TextStyle(
       fontSize: 26,
       fontWeight: FontWeight.w300,
       color: AppColors.selectedItem,
@@ -105,7 +113,7 @@ TextTheme _buildTextTheme(TextTheme base) {
       fontWeight: FontWeight.w600,
       letterSpacing: 1.5,
     ),
-    bodyMedium: const TextStyle(
+    bodyMedium: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
       color: AppColors.textMuted,
