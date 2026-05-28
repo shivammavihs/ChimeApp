@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
@@ -16,66 +18,79 @@ class InputPanel extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(height: scale.h(8)),
+        SizedBox(height: scale.h(4)),
         Text(
           'SET INTERVAL',
           style: TextStyle(
             fontSize: scale.sp(10),
             fontWeight: FontWeight.w500,
-            letterSpacing: scale.w(4.0),
-            color: Colors.white.withValues(alpha: 0.45),
+            letterSpacing: scale.w(5.0),
+            color: Colors.white.withValues(alpha: 0.35),
           ),
         ),
-        SizedBox(height: scale.h(36)),
+        SizedBox(height: scale.h(28)),
 
         // The unified 3-column scroll picker
         const UnifiedWheelPicker(),
 
-        SizedBox(height: scale.h(48)),
+        SizedBox(height: scale.h(36)),
 
         // Dynamic presets label
         Text(
           'PRESETS',
           style: TextStyle(
             fontSize: scale.sp(10),
-            fontWeight: FontWeight.w600,
-            letterSpacing: scale.w(4.0),
-            color: Colors.white.withValues(alpha: 0.35),
+            fontWeight: FontWeight.w500,
+            letterSpacing: scale.w(5.0),
+            color: Colors.white.withValues(alpha: 0.30),
           ),
         ),
-        SizedBox(height: scale.h(18)),
+        SizedBox(height: scale.h(14)),
 
-        // Preset buttons row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildPresetButton(
-              context,
-              ref,
-              label: '1m (5x)',
-              mins: 1,
-              secs: 0,
-              reps: 5,
-            ),
-            SizedBox(width: scale.w(12)),
-            _buildPresetButton(
-              context,
-              ref,
-              label: '3m (5x)',
-              mins: 3,
-              secs: 0,
-              reps: 5,
-            ),
-            SizedBox(width: scale.w(12)),
-            _buildPresetButton(
-              context,
-              ref,
-              label: '5m (10x)',
-              mins: 5,
-              secs: 0,
-              reps: 10,
-            ),
-          ],
+        // Dynamic, horizontally scrollable presets list
+        Consumer(
+          builder: (context, ref, child) {
+            final presets = ref.watch(presetsProvider);
+
+            if (presets.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: scale.h(8)),
+                  child: Text(
+                    'No presets yet — add from Options',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      fontSize: scale.sp(12),
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: scale.w(12)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: presets.map((preset) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: scale.w(4)),
+                    child: _buildPresetButton(
+                      context,
+                      ref,
+                      label: preset.label,
+                      mins: preset.minutes,
+                      secs: preset.seconds,
+                      reps: preset.reps,
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -98,35 +113,54 @@ class InputPanel extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         ref.read(intervalMinutesProvider.notifier).set(mins);
         ref.read(intervalSecondsProvider.notifier).set(secs);
         ref.read(totalRepsProvider.notifier).set(reps);
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: scale.w(22),
-          vertical: scale.h(11),
-        ),
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(scale.sp(22)),
-          border: Border.all(
-            color: isActive
-                ? AppColors.primaryLight.withValues(alpha: 0.8)
-                : Colors.white.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.5),
-            fontSize: scale.sp(12),
-            fontWeight: FontWeight.w400,
-            letterSpacing: scale.w(0.5),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(scale.sp(20)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.symmetric(
+              horizontal: scale.w(20),
+              vertical: scale.h(10),
+            ),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? AppColors.primary.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(scale.sp(20)),
+              border: Border.all(
+                color: isActive
+                    ? AppColors.primaryLight.withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.10),
+                width: 1,
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        blurRadius: 12,
+                        spreadRadius: 0,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isActive
+                    ? Colors.white.withValues(alpha: 0.95)
+                    : Colors.white.withValues(alpha: 0.45),
+                fontSize: scale.sp(12),
+                fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+                letterSpacing: scale.w(0.5),
+              ),
+            ),
           ),
         ),
       ),

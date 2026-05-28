@@ -118,12 +118,16 @@ void onStart(ServiceInstance service) async {
         await backgroundPlayer.play(DeviceFileSource(customSoundPath!));
       } else {
         final Map<String, String> builtInChimes = {
-          'default': 'audio/chime.mp3',
-          'playful': 'audio/playful_chime.mp3',
-          'crystal': 'audio/ding.mp3',
-          'click': 'audio/click_high.mp3',
+          'dragon_studio_alert': 'audio/dragon_studio_alert.mp3',
+          'notification_message_alert': 'audio/notification_message_alert.mp3',
+          'clear_mobile_notification': 'audio/clear_mobile_notification.mp3',
+          'mysterious_ringtone': 'audio/mysterious_ringtone.mp3',
+          'new_notification_030': 'audio/new_notification_030.mp3',
+          'new_notification_050': 'audio/new_notification_050.mp3',
+          'new_notification_060': 'audio/new_notification_060.mp3',
+          'new_notification_061': 'audio/new_notification_061.mp3',
         };
-        final assetPath = builtInChimes[selectedChimeType ?? 'default'] ?? 'audio/chime.mp3';
+        final assetPath = builtInChimes[selectedChimeType ?? 'dragon_studio_alert'] ?? 'audio/dragon_studio_alert.mp3';
         await backgroundPlayer.play(AssetSource(assetPath));
       }
     } catch (e) {
@@ -192,7 +196,7 @@ void onStart(ServiceInstance service) async {
       intervalSeconds = event['intervalSeconds'] as int;
       totalReps = event['totalReps'] as int;
       customSoundPath = event['customChimeSoundPath'] as String?;
-      selectedChimeType = event['selectedChimeType'] as String? ?? 'default';
+      selectedChimeType = event['selectedChimeType'] as String? ?? 'dragon_studio_alert';
       
       remainingSeconds = intervalSeconds;
       currentRep = 1;

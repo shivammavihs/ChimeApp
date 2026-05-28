@@ -8,7 +8,7 @@ class AppColors {
 
   static bool isDark = true;
 
-  static Color get background => isDark ? const Color(0xFF030611) : const Color(0xFFF4F6FC);
+  static Color get background => isDark ? const Color(0xFF010208) : const Color(0xFFF4F6FC);
   static Color get surfaceGlass => isDark ? const Color(0x0FFFFFFF) : const Color(0x0D000000); // ~6% white in dark, ~5% black in light
   static Color get primary => isDark ? const Color(0xFF2B5CE6) : const Color(0xFF1B4DC6); // cobalt blue
   static Color get primaryLight => isDark ? const Color(0xFF4F8EF7) : const Color(0xFF336FD3); // bright cobalt
@@ -25,8 +25,8 @@ class AppColors {
   static Color get startButton => isDark ? const Color(0xFF7EB0D5) : const Color(0xFF3B6E8C); // warm sky-blue for start
   static Color get presetBg => isDark ? const Color(0xFF2C1E30) : const Color(0xFFF2EAF3); // dark plum/eggplant -> pastel plum
   static Color get selectedItem => isDark ? const Color(0xFF8AB4F8) : const Color(0xFF1B4DC6); // light blue selected numbers
-  static Color get unselectedItem => isDark ? const Color(0xFF6E6070) : const Color(0xFFA592A7); // muted unselected numbers
-  static Color get labelMuted => isDark ? const Color(0xFF9E8F9A) : const Color(0xFF7E6B7B); // soft mauve label color
+  static Color get unselectedItem => isDark ? const Color(0xFF5A5065) : const Color(0xFFA592A7); // muted unselected numbers
+  static Color get labelMuted => isDark ? const Color(0xFF8A7D8A) : const Color(0xFF7E6B7B); // soft mauve label color
   static Color get navBarBg => isDark ? const Color(0x19FFFFFF) : const Color(0x12000000); // glassmorphic bottom nav bar
 }
 

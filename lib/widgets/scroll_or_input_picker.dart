@@ -146,7 +146,10 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
           ),
           const SizedBox(width: 8),
           IconButton(
-            onPressed: _saveAndToggle,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _saveAndToggle();
+            },
             icon: Icon(
               Icons.check_circle_rounded,
               color: AppColors.primaryLight,
@@ -183,7 +186,11 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
                   : const NeverScrollableScrollPhysics(),
               onSelectedItemChanged: (index) {
                 if (widget.enabled) {
-                  widget.onChanged(index + widget.minValue);
+                  final val = index + widget.minValue;
+                  if (val != widget.value) {
+                    HapticFeedback.selectionClick();
+                  }
+                  widget.onChanged(val);
                 }
               },
               childDelegate: ListWheelChildBuilderDelegate(
@@ -236,7 +243,10 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
             right: 0,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: _startEditing,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _startEditing();
+              },
             ),
           ),
 

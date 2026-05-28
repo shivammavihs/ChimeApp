@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/timer_provider.dart';
@@ -160,11 +161,13 @@ class _StartButtonState extends State<_StartButton>
   @override
   Widget build(BuildContext context) {
     final scale = ResponsiveScale.of(context);
+    final btnSize = scale.sp(80);
 
     return GestureDetector(
       onTapDown: (_) => _ctrl.reverse(),
       onTapUp: (_) {
         _ctrl.forward();
+        HapticFeedback.mediumImpact();
         widget.onTap();
       },
       onTapCancel: () => _ctrl.forward(),
@@ -176,41 +179,73 @@ class _StartButtonState extends State<_StartButton>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Circular Play button
+                // Gradient ring container — outer ring is the gradient border
                 Container(
-                  width: scale.sp(76),
-                  height: scale.sp(76),
+                  width: btnSize,
+                  height: btnSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.isDark ? const Color(0xFF090D1C) : Colors.white, // premium adapts to light/dark
-                    border: Border.all(
-                      color: AppColors.accent,
-                      width: 1.5 * scale.scaleFactor,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.accent,
+                        AppColors.primary,
+                        AppColors.primaryLight,
+                      ],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.accent.withValues(alpha: AppColors.isDark ? 0.35 : 0.15),
+                        color: AppColors.primary.withValues(alpha: 0.30),
                         blurRadius: _glow.value * scale.scaleFactor,
-                        spreadRadius: 0.5 * scale.scaleFactor,
+                        spreadRadius: 1 * scale.scaleFactor,
+                      ),
+                      BoxShadow(
+                        color: AppColors.accent.withValues(alpha: 0.10),
+                        blurRadius: (_glow.value * 2) * scale.scaleFactor,
+                        spreadRadius: 0,
                       ),
                     ],
                   ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    color: AppColors.isDark ? Colors.white : AppColors.primary,
-                    size: scale.sp(38),
+                  padding: EdgeInsets.all(1.5 * scale.scaleFactor), // ring width
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 0.9,
+                        colors: AppColors.isDark
+                            ? [
+                                const Color(0xFF0C1228),
+                                const Color(0xFF060A18),
+                              ]
+                            : [
+                                Colors.white,
+                                const Color(0xFFF0F2F8),
+                              ],
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: AppColors.isDark
+                          ? Colors.white.withValues(alpha: 0.95)
+                          : AppColors.primary,
+                      size: scale.sp(40),
+                    ),
                   ),
                 ),
-                SizedBox(height: scale.h(12)),
+                SizedBox(height: scale.h(14)),
                 // Text label below the button
                 Text(
-                  'START',
+                  'S T A R T',
                   style: TextStyle(
-                    color: AppColors.isDark ? Colors.white.withValues(alpha: 0.9) : AppColors.primary,
-                    fontSize: scale.sp(12),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: scale.w(6.0),
+                    color: AppColors.isDark
+                        ? AppColors.accent.withValues(alpha: 0.7)
+                        : AppColors.primary,
+                    fontSize: scale.sp(11),
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: scale.w(4.0),
                   ),
                 ),
               ],
@@ -354,6 +389,7 @@ class _GlassPillState extends State<_GlassPill>
       onTapDown: (_) => _ctrl.reverse(),
       onTapUp: (_) {
         _ctrl.forward();
+        HapticFeedback.mediumImpact();
         widget.onTap();
       },
       onTapCancel: () => _ctrl.forward(),

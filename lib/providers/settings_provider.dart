@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -181,7 +182,7 @@ class BoolSettingNotifier extends StateNotifier<bool> {
 }
 
 // ---------------------------------------------------------------------------
-// Selected chime type persistence ('default', 'playful', 'crystal', 'click', 'custom')
+// Selected chime type persistence ('dragon_studio_alert', 'notification_message_alert', etc.)
 // ---------------------------------------------------------------------------
 const _kSelectedChimeType = 'selected_chime_type';
 
@@ -191,9 +192,111 @@ final selectedChimeTypeProvider =
   return StringSettingNotifier(
     prefs: prefs,
     key: _kSelectedChimeType,
-    defaultValue: 'default',
+    defaultValue: 'dragon_studio_alert',
   );
 });
+
+// ---------------------------------------------------------------------------
+// Chime Preset Model and Provider
+// ---------------------------------------------------------------------------
+class ChimePreset {
+  final String id;
+  final String label;
+  final int minutes;
+  final int seconds;
+  final int reps;
+
+  ChimePreset({
+    required this.id,
+    required this.label,
+    required this.minutes,
+    required this.seconds,
+    required this.reps,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'label': label,
+        'minutes': minutes,
+        'seconds': seconds,
+        'reps': reps,
+      };
+
+  factory ChimePreset.fromJson(Map<String, dynamic> json) => ChimePreset(
+        id: json['id'] as String,
+        label: json['label'] as String,
+        minutes: json['minutes'] as int,
+        seconds: json['seconds'] as int,
+        reps: json['reps'] as int,
+      );
+}
+
+const _kPresets = 'chime_presets';
+
+final presetsProvider =
+    StateNotifierProvider<PresetsNotifier, List<ChimePreset>>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return PresetsNotifier(prefs: prefs);
+});
+
+class PresetsNotifier extends StateNotifier<List<ChimePreset>> {
+  PresetsNotifier({required SharedPreferences prefs})
+      : _prefs = prefs,
+        super(_loadPresets(prefs));
+
+  final SharedPreferences _prefs;
+
+  static List<ChimePreset> _loadPresets(SharedPreferences prefs) {
+    final list = prefs.getStringList(_kPresets);
+    if (list == null) {
+      // Seed default initial presets matching previous design
+      return [
+        ChimePreset(id: '1', label: '1m (5x)', minutes: 1, seconds: 0, reps: 5),
+        ChimePreset(id: '2', label: '3m (5x)', minutes: 3, seconds: 0, reps: 5),
+        ChimePreset(id: '3', label: '5m (10x)', minutes: 5, seconds: 0, reps: 10),
+      ];
+    }
+    try {
+      return list
+          .map((str) => ChimePreset.fromJson(json.decode(str) as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // Fallback on corrupt data
+      return [
+        ChimePreset(id: '1', label: '1m (5x)', minutes: 1, seconds: 0, reps: 5),
+        ChimePreset(id: '2', label: '3m (5x)', minutes: 3, seconds: 0, reps: 5),
+        ChimePreset(id: '3', label: '5m (10x)', minutes: 5, seconds: 0, reps: 10),
+      ];
+    }
+  }
+
+  void _save() {
+    final list = state.map((p) => json.encode(p.toJson())).toList();
+    _prefs.setStringList(_kPresets, list);
+  }
+
+  void addPreset({
+    required String label,
+    required int minutes,
+    required int seconds,
+    required int reps,
+  }) {
+    final newPreset = ChimePreset(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      label: label,
+      minutes: minutes,
+      seconds: seconds,
+      reps: reps,
+    );
+    state = [...state, newPreset];
+    _save();
+  }
+
+  void deletePreset(String id) {
+    state = state.where((p) => p.id != id).toList();
+    _save();
+  }
+}
 
 
 

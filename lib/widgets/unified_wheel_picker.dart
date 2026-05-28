@@ -110,7 +110,6 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Highlight underlines for the selected center items matching reference image
                 IgnorePointer(
                   child: SizedBox(
                     height: 52 * scale.scaleFactor,
@@ -120,22 +119,8 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                           child: Align(
                             alignment: Alignment.bottomCenter,
                             child: Padding(
-                              padding: EdgeInsets.only(bottom: 6 * scale.scaleFactor),
-                              child: Container(
-                                width: scale.w(34),
-                                height: 2 * scale.scaleFactor,
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent,
-                                  borderRadius: BorderRadius.circular(1 * scale.scaleFactor),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.accent.withValues(alpha: 0.5),
-                                      blurRadius: 4 * scale.scaleFactor,
-                                      spreadRadius: 0.5 * scale.scaleFactor,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              padding: EdgeInsets.only(bottom: 4 * scale.scaleFactor),
+                              child: _buildGradientLine(scale),
                             ),
                           ),
                         ),
@@ -153,22 +138,8 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                           child: Align(
                             alignment: Alignment.bottomCenter,
                             child: Padding(
-                              padding: EdgeInsets.only(bottom: 6 * scale.scaleFactor),
-                              child: Container(
-                                width: scale.w(34),
-                                height: 2 * scale.scaleFactor,
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent,
-                                  borderRadius: BorderRadius.circular(1 * scale.scaleFactor),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.accent.withValues(alpha: 0.5),
-                                      blurRadius: 4 * scale.scaleFactor,
-                                      spreadRadius: 0.5 * scale.scaleFactor,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              padding: EdgeInsets.only(bottom: 4 * scale.scaleFactor),
+                              child: _buildGradientLine(scale),
                             ),
                           ),
                         ),
@@ -186,22 +157,8 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                           child: Align(
                             alignment: Alignment.bottomCenter,
                             child: Padding(
-                              padding: EdgeInsets.only(bottom: 6 * scale.scaleFactor),
-                              child: Container(
-                                width: scale.w(34),
-                                height: 2 * scale.scaleFactor,
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent,
-                                  borderRadius: BorderRadius.circular(1 * scale.scaleFactor),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.accent.withValues(alpha: 0.5),
-                                      blurRadius: 4 * scale.scaleFactor,
-                                      spreadRadius: 0.5 * scale.scaleFactor,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              padding: EdgeInsets.only(bottom: 4 * scale.scaleFactor),
+                              child: _buildGradientLine(scale),
                             ),
                           ),
                         ),
@@ -234,7 +191,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                     Text(
                       ':',
                       style: TextStyle(
-                        color: AppColors.selectedItem,
+                        color: AppColors.selectedItem.withValues(alpha: 0.4),
                         fontSize: 26 * scale.scaleFactor,
                         fontWeight: FontWeight.w200,
                       ),
@@ -262,7 +219,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                     Text(
                       '×',
                       style: TextStyle(
-                        color: AppColors.selectedItem.withValues(alpha: 0.6),
+                        color: AppColors.selectedItem.withValues(alpha: 0.3),
                         fontSize: 22 * scale.scaleFactor,
                         fontWeight: FontWeight.w200,
                       ),
@@ -303,10 +260,29 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
           label.toUpperCase(),
           style: TextStyle(
             fontSize: scale.sp(10),
-            fontWeight: FontWeight.w700,
-            letterSpacing: scale.w(2.0),
-            color: AppColors.labelMuted,
+            fontWeight: FontWeight.w600,
+            letterSpacing: scale.w(3.0),
+            color: AppColors.textMuted.withValues(alpha: 0.85),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGradientLine(ResponsiveScale scale) {
+    return Container(
+      width: scale.w(38),
+      height: 1.0,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(0.5),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.accent.withValues(alpha: 0.0),
+            AppColors.accent.withValues(alpha: 0.7),
+            AppColors.accent.withValues(alpha: 0.7),
+            AppColors.accent.withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.25, 0.75, 1.0],
         ),
       ),
     );
@@ -346,8 +322,16 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                 fontWeight: isSelected ? FontWeight.w400 : FontWeight.w200,
                 color: isSelected
                     ? AppColors.selectedItem
-                    : AppColors.unselectedItem.withValues(alpha: 0.4),
+                    : AppColors.unselectedItem.withValues(alpha: 0.5),
                 letterSpacing: -0.5 * scale.scaleFactor,
+                shadows: isSelected
+                    ? [
+                        Shadow(
+                          color: AppColors.accent.withValues(alpha: 0.35),
+                          blurRadius: 16,
+                        ),
+                      ]
+                    : null,
               ),
             ),
           );

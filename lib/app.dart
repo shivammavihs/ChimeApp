@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/settings_provider.dart';
 import '../screens/home_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -11,22 +10,21 @@ class ChimeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = ref.watch(isDarkModeProvider);
-    AppColors.isDark = isDark;
+    AppColors.isDark = true;
 
     // Force system status-bar icons & navigation bar colors to match theme dynamically
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: AppColors.background,
-      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness: Brightness.light,
     ));
 
     return MaterialApp(
       title: 'tickr',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      themeMode: ThemeMode.dark,
       home: const HomeScreen(),
     );
   }

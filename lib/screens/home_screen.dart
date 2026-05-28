@@ -1,10 +1,9 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:math' as math;
 
 import 'package:permission_handler/permission_handler.dart';
@@ -16,6 +15,8 @@ import '../theme/responsive_scale.dart';
 import '../widgets/control_bar.dart';
 import '../widgets/countdown_display.dart';
 import '../widgets/input_panel.dart';
+import 'presets_screen.dart';
+import 'chimes_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Home screen — dispatches to phone or tablet layout
@@ -29,6 +30,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -37,19 +39,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Listen for chime events to play audio reactively
     ref.listenManual(chimeEventProvider, (_, next) {
       next.whenData((_) async {
-        final selectedType = ref.read(selectedChimeTypeProvider) ?? 'default';
+        final selectedType = ref.read(selectedChimeTypeProvider) ?? 'dragon_studio_alert';
         final customPath = ref.read(customChimeSoundPathProvider);
         
         if (selectedType == 'custom' && customPath != null && File(customPath).existsSync()) {
           await _audioPlayer.play(DeviceFileSource(customPath));
         } else {
           final Map<String, String> builtInChimes = {
-            'default': 'audio/chime.mp3',
-            'playful': 'audio/playful_chime.mp3',
-            'crystal': 'audio/ding.mp3',
-            'click': 'audio/click_high.mp3',
+            'dragon_studio_alert': 'audio/dragon_studio_alert.mp3',
+            'notification_message_alert': 'audio/notification_message_alert.mp3',
+            'clear_mobile_notification': 'audio/clear_mobile_notification.mp3',
+            'mysterious_ringtone': 'audio/mysterious_ringtone.mp3',
+            'new_notification_030': 'audio/new_notification_030.mp3',
+            'new_notification_050': 'audio/new_notification_050.mp3',
+            'new_notification_060': 'audio/new_notification_060.mp3',
+            'new_notification_061': 'audio/new_notification_061.mp3',
           };
-          final assetPath = builtInChimes[selectedType] ?? 'audio/chime.mp3';
+          final assetPath = builtInChimes[selectedType] ?? 'audio/dragon_studio_alert.mp3';
           await _audioPlayer.play(AssetSource(assetPath));
         }
       });
@@ -76,11 +82,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isDark = ref.watch(isDarkModeProvider);
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: const _TickrDrawer(),
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
           // Background rich space gradient glow
-          _BackgroundGlow(isDark: isDark),
+          BackgroundGlow(isDark: isDark),
 
           // Content
           SafeArea(
@@ -101,7 +109,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             scaleX: scaleX,
                             scaleY: scaleY,
                             scaleFactor: scaleFactor,
-                            child: _MobileLayout(constraints: tabletConstraints),
+                            child: _MobileLayout(
+                              constraints: tabletConstraints,
+                              onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                            ),
                           );
                         },
                       ),
@@ -116,7 +127,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     scaleX: scaleX,
                     scaleY: scaleY,
                     scaleFactor: scaleFactor,
-                    child: _MobileLayout(constraints: constraints),
+                    child: _MobileLayout(
+                      constraints: constraints,
+                      onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                    ),
                   );
                 }
               },
@@ -131,15 +145,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // ---------------------------------------------------------------------------
 // Background ambient glow effect — dynamic animated multi-color theme gradient
 // ---------------------------------------------------------------------------
-class _BackgroundGlow extends StatefulWidget {
-  const _BackgroundGlow({required this.isDark});
+class BackgroundGlow extends StatefulWidget {
+  const BackgroundGlow({required this.isDark, super.key});
   final bool isDark;
 
   @override
-  State<_BackgroundGlow> createState() => _BackgroundGlowState();
+  State<BackgroundGlow> createState() => _BackgroundGlowState();
 }
 
-class _BackgroundGlowState extends State<_BackgroundGlow>
+class _BackgroundGlowState extends State<BackgroundGlow>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -148,7 +162,7 @@ class _BackgroundGlowState extends State<_BackgroundGlow>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 15), // smooth drifting cycle
+      duration: const Duration(seconds: 5), // smooth drifting cycle - sped up by 200% (3x faster)
     )..repeat();
   }
 
@@ -161,92 +175,163 @@ class _BackgroundGlowState extends State<_BackgroundGlow>
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return CustomPaint(
-            painter: _AnimatedGradientPainter(_controller, widget.isDark),
-          );
-        },
+      child: Stack(
+        children: [
+          // Base custom painted dynamic morphing liquid blobs
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return CustomPaint(
+                  size: Size.infinite,
+                  painter: AnimatedGradientPainter(_controller, widget.isDark),
+                );
+              },
+            ),
+          ),
+          // Glassmorphic backdrop blur overlay to blend the blobs into soft dynamic fogs
+          Positioned.fill(
+            child: IgnorePointer(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 95, sigmaY: 95),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _AnimatedGradientPainter extends CustomPainter {
-  _AnimatedGradientPainter(this.animation, this.isDark) : super(repaint: animation);
+class AnimatedGradientPainter extends CustomPainter {
+  AnimatedGradientPainter(this.animation, this.isDark) : super(repaint: animation);
 
   final Animation<double> animation;
   final bool isDark;
+
+  // Render organic morphing liquid blob instead of simple circles
+  void _drawBlob(
+    Canvas canvas,
+    Offset center,
+    double baseRadius,
+    Paint paint,
+    double t,
+    double seed,
+  ) {
+    final path = Path();
+    const int pointsCount = 8;
+    final double angleStep = (2 * math.pi) / pointsCount;
+    final List<Offset> points = [];
+
+    // Calculate morphing wave distortion at 8 radial control points
+    for (int i = 0; i < pointsCount; i++) {
+      final double angle = i * angleStep;
+      
+      // Dynamic noise waves with multiple frequencies and seed values to randomize shapes
+      final double radiusNoise = 0.16 * math.sin(angle * 3 + t * 2 * math.pi + seed) +
+                                0.08 * math.cos(angle * 5 - t * 4 * math.pi + seed * 1.7) +
+                                0.04 * math.sin(angle * 2 + t * 6 * math.pi + seed * 3.1);
+      final double currentRadius = baseRadius * (1.0 + radiusNoise);
+      final double x = center.dx + currentRadius * math.cos(angle);
+      final double y = center.dy + currentRadius * math.sin(angle);
+      points.add(Offset(x, y));
+    }
+
+    // Connect control points using smooth quadratic bezier curves
+    path.moveTo(points[0].dx, points[0].dy);
+    for (int i = 0; i < pointsCount; i++) {
+      final p1 = points[(i + 1) % pointsCount];
+      final controlAngle = i * angleStep + (angleStep / 2);
+      
+      // Smooth control point distance using the same noise wave formula
+      final double controlRadiusNoise = 0.16 * math.sin(controlAngle * 3 + t * 2 * math.pi + seed) +
+                                       0.08 * math.cos(controlAngle * 5 - t * 4 * math.pi + seed * 1.7) +
+                                       0.04 * math.sin(controlAngle * 2 + t * 6 * math.pi + seed * 3.1);
+      final double controlRadius = baseRadius * (1.0 + controlRadiusNoise);
+      final cpX = center.dx + controlRadius * math.cos(controlAngle);
+      final cpY = center.dy + controlRadius * math.sin(controlAngle);
+
+      path.quadraticBezierTo(cpX, cpY, p1.dx, p1.dy);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final t = animation.value;
 
     if (isDark) {
-      // Dark mode: space gradient
-      final bgPaint = Paint()..color = const Color(0xFF030611);
+      // Dark mode: deep space background
+      final bgPaint = Paint()..color = const Color(0xFF010208);
       canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
       final centerX = size.width * 0.5;
-      final centerY = size.height * 0.55;
+      final centerY = size.height * 0.68;
 
-      // Main vibrant blue glowing core blob
-      final mainGlowRadius = size.width * 0.95;
-      final pulseRadius = mainGlowRadius * (1.0 + 0.06 * math.sin(t * 2 * math.pi));
+      // ── Primary: vivid dark BLUE blob ──
+      // Drifts with its own orbit so it separates from the purple
+      final blueRadius = size.width * 0.85;
       final blueCenter = Offset(
-        centerX + size.width * 0.02 * math.sin(t * 2 * math.pi),
-        centerY + size.height * 0.04 * math.cos(t * 2 * math.pi),
+        centerX + size.width * 0.08 * math.sin(t * 2 * math.pi),
+        centerY + size.height * 0.05 * math.cos(t * 2 * math.pi + 0.3),
       );
       final bluePaint = Paint()
         ..shader = RadialGradient(
           colors: [
-            const Color(0xFF0048FF).withValues(alpha: 0.85),
-            const Color(0xFF003CFF).withValues(alpha: 0.4),
-            const Color(0xFF001188).withValues(alpha: 0.0),
+            const Color(0xFF1A3A9F).withValues(alpha: 0.90), // vivid dark blue
+            const Color(0xFF0E1F5E).withValues(alpha: 0.50),
+            const Color(0x00030611),
           ],
-          stops: const [0.0, 0.45, 1.0],
-        ).createShader(Rect.fromCircle(center: blueCenter, radius: pulseRadius));
-      canvas.drawCircle(blueCenter, pulseRadius, bluePaint);
+          stops: const [0.0, 0.4, 1.0],
+        ).createShader(Rect.fromCircle(center: blueCenter, radius: blueRadius * 1.3));
+      _drawBlob(canvas, blueCenter, blueRadius, bluePaint, t, 1.0);
 
-      // Dynamic secondary cyan-blue hot-spot
-      final hotSpotRadius = size.width * 0.48;
-      final hotSpotPaint = Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFF3888FF).withValues(alpha: 0.75),
-            const Color(0xFF0044FF).withValues(alpha: 0.0),
-          ],
-          stops: const [0.0, 1.0],
-        ).createShader(Rect.fromCircle(center: blueCenter, radius: hotSpotRadius));
-      canvas.drawCircle(blueCenter, hotSpotRadius, hotSpotPaint);
-
-      // Shifting violet glow
-      final violetCenter = Offset(
-        centerX - size.width * 0.07 * math.cos((t + 0.45) * 2 * math.pi),
-        centerY - size.height * 0.03 * math.sin((t + 0.45) * 2 * math.pi),
+      // ── Secondary: vivid dark PURPLE blob ──
+      // Counter-orbits the blue so the two visibly shift and overlap
+      final purpleRadius = size.width * 0.70;
+      final purpleCenter = Offset(
+        centerX - size.width * 0.10 * math.cos(t * 2 * math.pi + 1.2),
+        centerY - size.height * 0.04 * math.sin(t * 2 * math.pi + 0.8),
       );
-      final violetRadius = size.width * 0.65;
-      final violetPaint = Paint()
+      final purplePaint = Paint()
         ..shader = RadialGradient(
           colors: [
-            const Color(0xFF220E44).withValues(alpha: 0.6),
-            const Color(0xFF220E44).withValues(alpha: 0.0),
+            const Color(0xFF6B1FAA).withValues(alpha: 0.85), // vivid dark purple
+            const Color(0xFF3A0B63).withValues(alpha: 0.40),
+            const Color(0x00030611),
+          ],
+          stops: const [0.0, 0.4, 1.0],
+        ).createShader(Rect.fromCircle(center: purpleCenter, radius: purpleRadius * 1.3));
+      _drawBlob(canvas, purpleCenter, purpleRadius, purplePaint, t, 3.2);
+
+      // ── Blended indigo overlap glow ──
+      // Sits between the two, creating a smooth purple-blue transition zone
+      final blendCenter = Offset(
+        (blueCenter.dx + purpleCenter.dx) * 0.5,
+        (blueCenter.dy + purpleCenter.dy) * 0.5,
+      );
+      final blendRadius = size.width * 0.50;
+      final blendPaint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFF2E1B6B).withValues(alpha: 0.70), // deep indigo blend
+            const Color(0xFF150830).withValues(alpha: 0.0),
           ],
           stops: const [0.0, 1.0],
-        ).createShader(Rect.fromCircle(center: violetCenter, radius: violetRadius));
-      canvas.drawCircle(violetCenter, violetRadius, violetPaint);
+        ).createShader(Rect.fromCircle(center: blendCenter, radius: blendRadius * 1.3));
+      _drawBlob(canvas, blendCenter, blendRadius, blendPaint, t, 5.5);
     } else {
       // Light mode: Gorgeous pastel flowing gradient glow
       final bgPaint = Paint()..color = const Color(0xFFF4F6FC); // base light blue-gray
       canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
       final centerX = size.width * 0.5;
-      final centerY = size.height * 0.55;
+      final centerY = size.height * 0.68;
 
       // Soft warm sky-blue glow
       final mainGlowRadius = size.width * 1.1;
-      final pulseRadius = mainGlowRadius * (1.0 + 0.05 * math.sin(t * 2 * math.pi));
       final blueCenter = Offset(
         centerX + size.width * 0.03 * math.sin(t * 2 * math.pi),
         centerY + size.height * 0.03 * math.cos(t * 2 * math.pi),
@@ -259,8 +344,8 @@ class _AnimatedGradientPainter extends CustomPainter {
             const Color(0xFFF4F6FC).withValues(alpha: 0.0),
           ],
           stops: const [0.0, 0.5, 1.0],
-        ).createShader(Rect.fromCircle(center: blueCenter, radius: pulseRadius));
-      canvas.drawCircle(blueCenter, pulseRadius, bluePaint);
+        ).createShader(Rect.fromCircle(center: blueCenter, radius: mainGlowRadius * 1.25));
+      _drawBlob(canvas, blueCenter, mainGlowRadius, bluePaint, t, 1.5);
 
       // Soft warm lavender glow
       final secondaryCenter = Offset(
@@ -275,8 +360,8 @@ class _AnimatedGradientPainter extends CustomPainter {
             const Color(0xFFF9F3FC).withValues(alpha: 0.0),
           ],
           stops: const [0.0, 1.0],
-        ).createShader(Rect.fromCircle(center: secondaryCenter, radius: secondaryRadius));
-      canvas.drawCircle(secondaryCenter, secondaryRadius, secondaryPaint);
+        ).createShader(Rect.fromCircle(center: secondaryCenter, radius: secondaryRadius * 1.25));
+      _drawBlob(canvas, secondaryCenter, secondaryRadius, secondaryPaint, t, 3.0);
 
       // Soft warm peach/rose glow
       final peachCenter = Offset(
@@ -291,13 +376,13 @@ class _AnimatedGradientPainter extends CustomPainter {
             const Color(0xFFFFF7F7).withValues(alpha: 0.0),
           ],
           stops: const [0.0, 1.0],
-        ).createShader(Rect.fromCircle(center: peachCenter, radius: peachRadius));
-      canvas.drawCircle(peachCenter, peachRadius, peachPaint);
+        ).createShader(Rect.fromCircle(center: peachCenter, radius: peachRadius * 1.25));
+      _drawBlob(canvas, peachCenter, peachRadius, peachPaint, t, 5.0);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _AnimatedGradientPainter oldDelegate) =>
+  bool shouldRepaint(covariant AnimatedGradientPainter oldDelegate) =>
       oldDelegate.animation.value != animation.value || oldDelegate.isDark != isDark;
 }
 
@@ -305,8 +390,13 @@ class _AnimatedGradientPainter extends CustomPainter {
 // Mobile layout (< 600dp) — responsive, vertical flex, non-scrollable
 // ---------------------------------------------------------------------------
 class _MobileLayout extends ConsumerWidget {
-  const _MobileLayout({required this.constraints});
+  const _MobileLayout({
+    required this.constraints,
+    required this.onMenuPressed,
+  });
+
   final BoxConstraints constraints;
+  final VoidCallback onMenuPressed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -319,43 +409,48 @@ class _MobileLayout extends ConsumerWidget {
 
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: scale.w(24),
         vertical: scale.h(12),
       ),
       child: Column(
         children: [
           SizedBox(height: scale.h(12)),
 
-          // App header
-          const _AppHeader(),
+          // App header — unpadded horizontally so the hamburger menu sits at the far left edge
+          _AppHeader(onMenuPressed: onMenuPressed),
 
           const Spacer(flex: 2),
 
-          // Transition between Setup Wheel Picker and Active Countdown Display
+          // Transition between Setup Wheel Picker and Active Countdown Display — padded horizontally by 24
           Expanded(
             flex: 12,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, anim) => FadeTransition(
-                opacity: anim,
-                child: ScaleTransition(
-                  scale: Tween<double>(begin: 0.95, end: 1.0).animate(anim),
-                  child: child,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: scale.w(24)),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.95, end: 1.0).animate(anim),
+                    child: child,
+                  ),
                 ),
+                child: isIdle
+                    ? const InputPanel(key: ValueKey('setup_view'))
+                    : Center(
+                        key: const ValueKey('active_view'),
+                        child: CountdownDisplay(arcSize: arcSize),
+                      ),
               ),
-              child: isIdle
-                  ? const InputPanel(key: ValueKey('setup_view'))
-                  : Center(
-                      key: const ValueKey('active_view'),
-                      child: CountdownDisplay(arcSize: arcSize),
-                    ),
             ),
           ),
 
           const Spacer(flex: 2),
 
-          // Controls Bar (Starts/stops/pauses)
-          const ControlBar(),
+          // Controls Bar (Starts/stops/pauses) — padded horizontally by 24
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: scale.w(24)),
+            child: const ControlBar(),
+          ),
 
           const Spacer(flex: 2),
         ],
@@ -368,309 +463,218 @@ class _MobileLayout extends ConsumerWidget {
 // App header — logo + title
 // ---------------------------------------------------------------------------
 class _AppHeader extends ConsumerWidget {
-  const _AppHeader();
+  const _AppHeader({required this.onMenuPressed});
 
-  static final AudioPlayer _previewPlayer = AudioPlayer();
-
-  void _previewSound(String key, String? customPath) async {
-    try {
-      if (key == 'custom' && customPath != null && File(customPath).existsSync()) {
-        await _previewPlayer.play(DeviceFileSource(customPath));
-      } else {
-        final Map<String, String> builtInChimes = {
-          'default': 'audio/chime.mp3',
-          'playful': 'audio/playful_chime.mp3',
-          'crystal': 'audio/ding.mp3',
-          'click': 'audio/click_high.mp3',
-        };
-        final assetPath = builtInChimes[key] ?? 'audio/chime.mp3';
-        await _previewPlayer.play(AssetSource(assetPath));
-      }
-    } catch (e) {
-      debugPrint('Error previewing sound: $e');
-    }
-  }
-
-  Future<void> _pickCustomSound(BuildContext context, WidgetRef ref) async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-        allowMultiple: false,
-      );
-
-      if (result != null && result.files.single.path != null) {
-        final pickedFile = File(result.files.single.path!);
-        final ext = pickedFile.path.split('.').last;
-        final appDir = await getApplicationDocumentsDirectory();
-        
-        final savedFile = await pickedFile.copy(
-          '${appDir.path}/custom_chime.$ext',
-        );
-
-        ref.read(customChimeSoundPathProvider.notifier).set(savedFile.path);
-
-        if (!context.mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.surfaceGlass,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: AppColors.primary, width: 1),
-            ),
-            content: Text(
-              'Custom chime sound set successfully!',
-              style: TextStyle(color: AppColors.textPrimary),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red.withValues(alpha: 0.8),
-          behavior: SnackBarBehavior.floating,
-          content: Text('Failed to pick sound: $e'),
-        ),
-      );
-    }
-  }
-
-  void _showMenuBottomSheet(BuildContext context, WidgetRef ref) {
-    final scale = ResponsiveScale.of(context);
-    final isDark = ref.read(isDarkModeProvider);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
-      builder: (context) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: scale.w(24),
-                vertical: scale.h(20),
-              ),
-              decoration: BoxDecoration(
-                color: isDark 
-                    ? const Color(0xDC090D1C) 
-                    : const Color(0xDCF4F6FC),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border(
-                  top: BorderSide(
-                    color: isDark 
-                        ? const Color(0x26FFFFFF) 
-                        : const Color(0x19000000),
-                    width: 1.5,
-                  ),
-                ),
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: scale.w(40),
-                        height: scale.h(4),
-                        decoration: BoxDecoration(
-                          color: isDark 
-                              ? Colors.white.withValues(alpha: 0.2) 
-                              : Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: scale.h(20)),
-                    Text(
-                      'TICKR OPTIONS',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: scale.sp(14),
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: scale.w(3.0),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: scale.h(24)),
-                    
-                    // Curated Chime Options
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final selectedType = ref.watch(selectedChimeTypeProvider) ?? 'default';
-                        final customSoundPath = ref.watch(customChimeSoundPathProvider);
-                        final customFileName = customSoundPath != null 
-                            ? customSoundPath.split('/').last 
-                            : 'No file selected';
-
-                        final List<(String, String, String)> soundOptions = [
-                          ('default', 'Default Chime', 'Classic ticking alert sound'),
-                          ('playful', 'Playful Chime', 'Short cheerful sound effect'),
-                          ('crystal', 'Crystal Ding', 'Bright crystal bell tone'),
-                          ('click', 'Woodblock Click', 'Percussive wooden block click'),
-                          ('custom', 'Custom Audio File', customSoundPath != null ? 'File: $customFileName' : 'Select a custom sound from device'),
-                        ];
-
-                        return Column(
-                          children: soundOptions.map((opt) {
-                            final key = opt.$1;
-                            final name = opt.$2;
-                            final desc = opt.$3;
-                            final isSelected = selectedType == key;
-
-                            return Container(
-                              margin: EdgeInsets.only(bottom: scale.h(10)),
-                              decoration: BoxDecoration(
-                                color: isSelected 
-                                    ? AppColors.primary.withValues(alpha: AppColors.isDark ? 0.15 : 0.08)
-                                    : AppColors.isDark ? const Color(0x12FFFFFF) : const Color(0x0C000000),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isSelected 
-                                      ? AppColors.primary
-                                      : AppColors.isDark ? const Color(0x1AFFFFFF) : const Color(0x12000000),
-                                  width: isSelected ? 1.5 : 1,
-                                ),
-                              ),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () {
-                                  if (key == 'custom' && customSoundPath == null) {
-                                    // Let them pick a sound first!
-                                    Navigator.pop(context);
-                                    _pickCustomSound(context, ref);
-                                    ref.read(selectedChimeTypeProvider.notifier).set('custom');
-                                  } else {
-                                    ref.read(selectedChimeTypeProvider.notifier).set(key);
-                                    _previewSound(key, customSoundPath);
-                                  }
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: scale.w(16), vertical: scale.h(12)),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        key == 'custom' ? Icons.folder_open_rounded : Icons.music_note_rounded,
-                                        color: isSelected ? AppColors.accent : AppColors.textMuted,
-                                        size: scale.sp(20),
-                                      ),
-                                      SizedBox(width: scale.w(12)),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              name,
-                                              style: TextStyle(
-                                                color: AppColors.textPrimary,
-                                                fontSize: scale.sp(14),
-                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                              ),
-                                            ),
-                                            SizedBox(height: scale.h(2)),
-                                            Text(
-                                              desc,
-                                              style: TextStyle(
-                                                color: AppColors.textMuted,
-                                                fontSize: scale.sp(11),
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (key == 'custom' && customSoundPath != null) ...[
-                                        IconButton(
-                                          icon: Icon(Icons.edit_note_rounded, color: AppColors.accent, size: scale.sp(20)),
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            _pickCustomSound(context, ref);
-                                          },
-                                        ),
-                                      ],
-                                      Icon(
-                                        isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                                        color: isSelected ? AppColors.accent : AppColors.textDisabled,
-                                        size: scale.sp(20),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-                    SizedBox(height: scale.h(12)),
-                    // About/Credits or simple version
-                    Center(
-                      child: Text(
-                        'v1.0.0 • Premium Timer',
-                        style: TextStyle(
-                          color: AppColors.textDisabled,
-                          fontSize: scale.sp(10),
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: scale.h(10)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  final VoidCallback onMenuPressed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = ref.watch(isDarkModeProvider);
     final scale = ResponsiveScale.of(context);
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: scale.w(4)),
+      padding: EdgeInsets.symmetric(horizontal: scale.w(8)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             icon: Icon(
               Icons.menu_rounded,
-              color: AppColors.textPrimary.withValues(alpha: 0.8),
+              color: AppColors.textPrimary.withValues(alpha: 0.5),
               size: scale.sp(22),
             ),
-            onPressed: () => _showMenuBottomSheet(context, ref),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              onMenuPressed();
+            },
           ),
           Text(
             'TICKR',
             style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: scale.sp(16),
-              letterSpacing: scale.w(8.0),
+              color: AppColors.textPrimary.withValues(alpha: 0.8),
+              fontSize: scale.sp(15),
+              letterSpacing: scale.w(10.0),
               fontWeight: FontWeight.w300,
             ),
           ),
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              color: AppColors.textPrimary.withValues(alpha: 0.8),
-              size: scale.sp(22),
-            ),
-            onPressed: () {
-              ref.read(isDarkModeProvider.notifier).toggle();
-            },
-          ),
+          SizedBox(width: scale.w(48)), // Balances the 48dp leading hamburger icon touch target for perfect centering
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Slide-out Left Navigation Drawer
+// ---------------------------------------------------------------------------
+class _TickrDrawer extends ConsumerWidget {
+  const _TickrDrawer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    
+    // Determine layout scale dynamically
+    final isTablet = screenWidth >= 600;
+    final layoutWidth = isTablet ? 500.0 : screenWidth;
+    
+    final scaleX = (layoutWidth / 375.0).clamp(0.85, 1.4);
+    final scaleY = (screenHeight / 812.0).clamp(0.85, 1.4);
+    final scaleFactor = ((scaleX + scaleY) / 2.0).clamp(0.85, 1.4);
+
+    // Calculate drawer width: 30% of screen width on tablet, 75% on mobile
+    final drawerWidth = isTablet 
+        ? (screenWidth * 0.3).clamp(280.0, 450.0) 
+        : (screenWidth * 0.75).clamp(240.0, 320.0);
+
+    return ResponsiveScale(
+      scaleX: scaleX,
+      scaleY: scaleY,
+      scaleFactor: scaleFactor,
+      child: Builder(
+        builder: (context) {
+          final scale = ResponsiveScale.of(context);
+          return SizedBox(
+            width: drawerWidth,
+            child: Drawer(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xDC090D1C),
+                      borderRadius: BorderRadius.only(
+                        topRight: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                      border: Border(
+                        right: BorderSide(
+                          color: Color(0x26FFFFFF),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: scale.h(40)),
+                          // Elegant, minimalist OPTIONS header
+                          Text(
+                            'OPTIONS',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: scale.sp(16),
+                              letterSpacing: scale.w(6.0),
+                              fontWeight: FontWeight.w300,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: scale.h(40)),
+
+                          // Drawer items leading to dedicated pages
+                          _buildDrawerItem(
+                            context,
+                            icon: Icons.tune_rounded,
+                            title: 'Presets',
+                            onTap: () {
+                              Navigator.pop(context); // Close drawer
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const PresetsScreen()),
+                              );
+                            },
+                          ),
+                          _buildDrawerItem(
+                            context,
+                            icon: Icons.volume_up_rounded,
+                            title: 'Chime Sounds',
+                            onTap: () {
+                              Navigator.pop(context); // Close drawer
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ChimesScreen()),
+                              );
+                            },
+                          ),
+
+                          const Spacer(),
+
+                          Center(
+                            child: Text(
+                              'v1.0.0 • Premium Dark Timer',
+                              style: TextStyle(
+                                color: AppColors.textDisabled,
+                                fontSize: scale.sp(10),
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: scale.h(20)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    final scale = ResponsiveScale.of(context);
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: scale.w(16), vertical: scale.h(2)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: scale.w(12), vertical: scale.h(14)),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: AppColors.textPrimary.withValues(alpha: 0.7),
+                size: scale.sp(20),
+              ),
+              SizedBox(width: scale.w(16)),
+              Text(
+                title,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: scale.sp(14),
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textMuted.withValues(alpha: 0.4),
+                size: scale.sp(18),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
