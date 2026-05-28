@@ -34,14 +34,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _requestNotificationPermission();
-    // Listen for chime events to play audio
+    // Listen for chime events to play audio reactively
     ref.listenManual(chimeEventProvider, (_, next) {
       next.whenData((_) async {
+        final selectedType = ref.read(selectedChimeTypeProvider) ?? 'default';
         final customPath = ref.read(customChimeSoundPathProvider);
-        if (customPath != null && File(customPath).existsSync()) {
+        
+        if (selectedType == 'custom' && customPath != null && File(customPath).existsSync()) {
           await _audioPlayer.play(DeviceFileSource(customPath));
         } else {
-          await _audioPlayer.play(AssetSource('audio/chime.mp3'));
+          final Map<String, String> builtInChimes = {
+            'default': 'audio/chime.mp3',
+            'playful': 'audio/playful_chime.mp3',
+            'crystal': 'audio/ding.mp3',
+            'click': 'audio/click_high.mp3',
+          };
+          final assetPath = builtInChimes[selectedType] ?? 'audio/chime.mp3';
+          await _audioPlayer.play(AssetSource(assetPath));
         }
       });
     });
@@ -361,6 +370,27 @@ class _MobileLayout extends ConsumerWidget {
 class _AppHeader extends ConsumerWidget {
   const _AppHeader();
 
+  static final AudioPlayer _previewPlayer = AudioPlayer();
+
+  void _previewSound(String key, String? customPath) async {
+    try {
+      if (key == 'custom' && customPath != null && File(customPath).existsSync()) {
+        await _previewPlayer.play(DeviceFileSource(customPath));
+      } else {
+        final Map<String, String> builtInChimes = {
+          'default': 'audio/chime.mp3',
+          'playful': 'audio/playful_chime.mp3',
+          'crystal': 'audio/ding.mp3',
+          'click': 'audio/click_high.mp3',
+        };
+        final assetPath = builtInChimes[key] ?? 'audio/chime.mp3';
+        await _previewPlayer.play(AssetSource(assetPath));
+      }
+    } catch (e) {
+      debugPrint('Error previewing sound: $e');
+    }
+  }
+
   Future<void> _pickCustomSound(BuildContext context, WidgetRef ref) async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -471,101 +501,112 @@ class _AppHeader extends ConsumerWidget {
                     ),
                     SizedBox(height: scale.h(24)),
                     
-                    // Custom chime sound option
+                    // Curated Chime Options
                     Consumer(
                       builder: (context, ref, child) {
-                        final soundPath = ref.watch(customChimeSoundPathProvider);
-                        final fileName = soundPath != null 
-                            ? soundPath.split('/').last 
-                            : 'Default Chime';
-                        return Container(
-                          padding: EdgeInsets.all(scale.sp(16)),
-                          decoration: BoxDecoration(
-                            color: AppColors.isDark 
-                                ? const Color(0x12FFFFFF) 
-                                : const Color(0x0C000000),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.isDark 
-                                  ? const Color(0x1AFFFFFF) 
-                                  : const Color(0x12000000),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.music_note_rounded,
-                                    color: AppColors.accent,
-                                    size: scale.sp(20),
-                                  ),
-                                  SizedBox(width: scale.w(10)),
-                                  Text(
-                                    'Chime Sound',
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: scale.sp(14),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: scale.h(6)),
-                              Text(
-                                'Current: $fileName',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: scale.sp(12),
+                        final selectedType = ref.watch(selectedChimeTypeProvider) ?? 'default';
+                        final customSoundPath = ref.watch(customChimeSoundPathProvider);
+                        final customFileName = customSoundPath != null 
+                            ? customSoundPath.split('/').last 
+                            : 'No file selected';
+
+                        final List<(String, String, String)> soundOptions = [
+                          ('default', 'Default Chime', 'Classic ticking alert sound'),
+                          ('playful', 'Playful Chime', 'Short cheerful sound effect'),
+                          ('crystal', 'Crystal Ding', 'Bright crystal bell tone'),
+                          ('click', 'Woodblock Click', 'Percussive wooden block click'),
+                          ('custom', 'Custom Audio File', customSoundPath != null ? 'File: $customFileName' : 'Select a custom sound from device'),
+                        ];
+
+                        return Column(
+                          children: soundOptions.map((opt) {
+                            final key = opt.$1;
+                            final name = opt.$2;
+                            final desc = opt.$3;
+                            final isSelected = selectedType == key;
+
+                            return Container(
+                              margin: EdgeInsets.only(bottom: scale.h(10)),
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                    ? AppColors.primary.withValues(alpha: AppColors.isDark ? 0.15 : 0.08)
+                                    : AppColors.isDark ? const Color(0x12FFFFFF) : const Color(0x0C000000),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected 
+                                      ? AppColors.primary
+                                      : AppColors.isDark ? const Color(0x1AFFFFFF) : const Color(0x12000000),
+                                  width: isSelected ? 1.5 : 1,
                                 ),
                               ),
-                              SizedBox(height: scale.h(14)),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        elevation: 0,
-                                        padding: EdgeInsets.symmetric(vertical: scale.h(12)),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  if (key == 'custom' && customSoundPath == null) {
+                                    // Let them pick a sound first!
+                                    Navigator.pop(context);
+                                    _pickCustomSound(context, ref);
+                                    ref.read(selectedChimeTypeProvider.notifier).set('custom');
+                                  } else {
+                                    ref.read(selectedChimeTypeProvider.notifier).set(key);
+                                    _previewSound(key, customSoundPath);
+                                  }
+                                },
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: scale.w(16), vertical: scale.h(12)),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        key == 'custom' ? Icons.folder_open_rounded : Icons.music_note_rounded,
+                                        color: isSelected ? AppColors.accent : AppColors.textMuted,
+                                        size: scale.sp(20),
                                       ),
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        _pickCustomSound(context, ref);
-                                      },
-                                      child: const Text('Change Sound'),
-                                    ),
-                                  ),
-                                  if (soundPath != null) ...[
-                                    SizedBox(width: scale.w(10)),
-                                    IconButton(
-                                      icon: const Icon(Icons.refresh_rounded, color: Colors.redAccent),
-                                      tooltip: 'Reset to default chime',
-                                      onPressed: () {
-                                        ref.read(customChimeSoundPathProvider.notifier).clear();
-                                        Navigator.pop(context);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            backgroundColor: AppColors.presetBg,
-                                            behavior: SnackBarBehavior.floating,
-                                            content: Text(
-                                              'Chime sound reset to default.',
-                                              style: TextStyle(color: AppColors.textPrimary),
+                                      SizedBox(width: scale.w(12)),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              name,
+                                              style: TextStyle(
+                                                color: AppColors.textPrimary,
+                                                fontSize: scale.sp(14),
+                                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                              ),
                                             ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ],
+                                            SizedBox(height: scale.h(2)),
+                                            Text(
+                                              desc,
+                                              style: TextStyle(
+                                                color: AppColors.textMuted,
+                                                fontSize: scale.sp(11),
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (key == 'custom' && customSoundPath != null) ...[
+                                        IconButton(
+                                          icon: Icon(Icons.edit_note_rounded, color: AppColors.accent, size: scale.sp(20)),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            _pickCustomSound(context, ref);
+                                          },
+                                        ),
+                                      ],
+                                      Icon(
+                                        isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                                        color: isSelected ? AppColors.accent : AppColors.textDisabled,
+                                        size: scale.sp(20),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ],
-                          ),
+                            );
+                          }).toList(),
                         );
                       },
                     ),

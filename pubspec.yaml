@@ -47,3 +47,6 @@ flutter:
   assets:
     - assets/audio/chime.mp3
     - assets/audio/chime.wav
+    - assets/audio/playful_chime.mp3
+    - assets/audio/ding.mp3
+    - assets/audio/click_high.mp3

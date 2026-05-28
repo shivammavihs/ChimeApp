@@ -72,6 +72,7 @@ void onStart(ServiceInstance service) async {
   int totalReps = 0;
   int intervalSeconds = 0;
   String? customSoundPath;
+  String? selectedChimeType;
   Timer? ticker;
   bool isRunning = false;
 
@@ -113,10 +114,17 @@ void onStart(ServiceInstance service) async {
 
   void playChime() async {
     try {
-      if (customSoundPath != null && File(customSoundPath!).existsSync()) {
+      if (selectedChimeType == 'custom' && customSoundPath != null && File(customSoundPath!).existsSync()) {
         await backgroundPlayer.play(DeviceFileSource(customSoundPath!));
       } else {
-        await backgroundPlayer.play(AssetSource('audio/chime.mp3'));
+        final Map<String, String> builtInChimes = {
+          'default': 'audio/chime.mp3',
+          'playful': 'audio/playful_chime.mp3',
+          'crystal': 'audio/ding.mp3',
+          'click': 'audio/click_high.mp3',
+        };
+        final assetPath = builtInChimes[selectedChimeType ?? 'default'] ?? 'audio/chime.mp3';
+        await backgroundPlayer.play(AssetSource(assetPath));
       }
     } catch (e) {
       debugPrint('Error playing background audio: $e');
@@ -184,6 +192,7 @@ void onStart(ServiceInstance service) async {
       intervalSeconds = event['intervalSeconds'] as int;
       totalReps = event['totalReps'] as int;
       customSoundPath = event['customChimeSoundPath'] as String?;
+      selectedChimeType = event['selectedChimeType'] as String? ?? 'default';
       
       remainingSeconds = intervalSeconds;
       currentRep = 1;

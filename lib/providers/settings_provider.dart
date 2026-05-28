@@ -180,4 +180,20 @@ class BoolSettingNotifier extends StateNotifier<bool> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Selected chime type persistence ('default', 'playful', 'crystal', 'click', 'custom')
+// ---------------------------------------------------------------------------
+const _kSelectedChimeType = 'selected_chime_type';
+
+final selectedChimeTypeProvider =
+    StateNotifierProvider<StringSettingNotifier, String?>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return StringSettingNotifier(
+    prefs: prefs,
+    key: _kSelectedChimeType,
+    defaultValue: 'default',
+  );
+});
+
+
 

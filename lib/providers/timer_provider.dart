@@ -139,6 +139,7 @@ class ChimeTimerNotifier extends StateNotifier<ChimeState> {
     final intervalSecs = _ref.read(intervalSecondsTotal);
     final totalReps = _ref.read(totalRepsProvider);
     final customChimePath = _ref.read(customChimeSoundPathProvider);
+    final selectedChimeType = _ref.read(selectedChimeTypeProvider) ?? 'default';
 
     state = ChimeState(
       status: ChimeStatus.running,
@@ -158,6 +159,7 @@ class ChimeTimerNotifier extends StateNotifier<ChimeState> {
         'intervalSeconds': intervalSecs,
         'totalReps': totalReps,
         'customChimeSoundPath': customChimePath,
+        'selectedChimeType': selectedChimeType,
       });
     } else {
       _startTicker();
