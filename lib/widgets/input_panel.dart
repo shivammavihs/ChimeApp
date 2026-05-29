@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
+import '../services/vibration_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_scale.dart';
 import 'unified_wheel_picker.dart';
@@ -108,7 +108,7 @@ class InputPanel extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
         ref.read(intervalMinutesProvider.notifier).set(mins);
         ref.read(intervalSecondsProvider.notifier).set(secs);
         ref.read(totalRepsProvider.notifier).set(reps);
@@ -166,7 +166,7 @@ class InputPanel extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // Horizontally scrollable presets list with elegant fade-out & blue chevrons
 // ---------------------------------------------------------------------------
-class PresetsScrollArea extends StatefulWidget {
+class PresetsScrollArea extends ConsumerStatefulWidget {
   final List<ChimePreset> presets;
   final Widget Function(BuildContext, ChimePreset) presetBuilder;
 
@@ -177,10 +177,10 @@ class PresetsScrollArea extends StatefulWidget {
   });
 
   @override
-  State<PresetsScrollArea> createState() => _PresetsScrollAreaState();
+  ConsumerState<PresetsScrollArea> createState() => _PresetsScrollAreaState();
 }
 
-class _PresetsScrollAreaState extends State<PresetsScrollArea> {
+class _PresetsScrollAreaState extends ConsumerState<PresetsScrollArea> {
   late final ScrollController _scrollController;
   bool _showLeftArrow = true;
   bool _showRightArrow = true;
@@ -309,7 +309,7 @@ class _PresetsScrollAreaState extends State<PresetsScrollArea> {
                 ignoring: !_showLeftArrow,
                 child: GestureDetector(
                   onTap: () {
-                    HapticFeedback.lightImpact();
+                    VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                     _scroll(false);
                   },
                   behavior: HitTestBehavior.opaque,
@@ -342,7 +342,7 @@ class _PresetsScrollAreaState extends State<PresetsScrollArea> {
                 ignoring: !_showRightArrow,
                 child: GestureDetector(
                   onTap: () {
-                    HapticFeedback.lightImpact();
+                    VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                     _scroll(true);
                   },
                   behavior: HitTestBehavior.opaque,

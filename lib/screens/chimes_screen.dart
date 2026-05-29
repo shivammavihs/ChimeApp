@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -30,8 +29,9 @@ class _ChimesScreenState extends ConsumerState<ChimesScreen> {
 
   void _previewSound(String key, String? customPath) async {
     try {
+      final chimeHapticStrength = ref.read(chimeHapticStrengthProvider) ?? 'medium';
       // Trigger vibration in the rhythm of the chime
-      VibrationService.vibrateForChime(key);
+      VibrationService.vibrateForChime(key, chimeHapticStrength);
 
       if (key == 'custom' && customPath != null && File(customPath).existsSync()) {
         await _previewPlayer.play(DeviceFileSource(customPath));
@@ -176,7 +176,7 @@ class _ChimesScreenState extends ConsumerState<ChimesScreen> {
                                 size: scale.sp(28),
                               ),
                               onPressed: () {
-                                HapticFeedback.lightImpact();
+                                VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                                 Navigator.pop(context);
                               },
                             ),
@@ -237,7 +237,7 @@ class _ChimesScreenState extends ConsumerState<ChimesScreen> {
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(18),
                                   onTap: () {
-                                    HapticFeedback.lightImpact();
+                                    VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                                     if (key == 'custom' && customSoundPath == null) {
                                       _pickCustomSound(context);
                                       ref
@@ -314,7 +314,7 @@ class _ChimesScreenState extends ConsumerState<ChimesScreen> {
                                               size: scale.sp(22),
                                             ),
                                             onPressed: () {
-                                              HapticFeedback.lightImpact();
+                                              VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                                               _pickCustomSound(context);
                                             },
                                           ),

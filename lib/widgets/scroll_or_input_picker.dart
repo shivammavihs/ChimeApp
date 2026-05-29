@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/settings_provider.dart';
+import '../services/vibration_service.dart';
 import '../theme/app_theme.dart';
 
-class ScrollOrInputPicker extends StatefulWidget {
+class ScrollOrInputPicker extends ConsumerStatefulWidget {
   const ScrollOrInputPicker({
     super.key,
     required this.value,
@@ -21,10 +24,10 @@ class ScrollOrInputPicker extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<ScrollOrInputPicker> createState() => _ScrollOrInputPickerState();
+  ConsumerState<ScrollOrInputPicker> createState() => _ScrollOrInputPickerState();
 }
 
-class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
+class _ScrollOrInputPickerState extends ConsumerState<ScrollOrInputPicker> {
   bool _isEditing = false;
   late TextEditingController _textCtrl;
   late FixedExtentScrollController _scrollCtrl;
@@ -147,7 +150,7 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
           const SizedBox(width: 8),
           IconButton(
             onPressed: () {
-              HapticFeedback.lightImpact();
+              VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
               _saveAndToggle();
             },
             icon: Icon(
@@ -188,7 +191,7 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
                 if (widget.enabled) {
                   final val = index + widget.minValue;
                   if (val != widget.value) {
-                    HapticFeedback.selectionClick();
+                    VibrationService.vibrateForScroll(ref.read(scrollHapticStrengthProvider) ?? 'heavy');
                   }
                   widget.onChanged(val);
                 }
@@ -244,7 +247,7 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
-                HapticFeedback.lightImpact();
+                VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                 _startEditing();
               },
             ),

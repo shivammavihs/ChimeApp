@@ -182,6 +182,43 @@ class BoolSettingNotifier extends StateNotifier<bool> {
 }
 
 // ---------------------------------------------------------------------------
+// Haptics Strengths Persistence
+// ---------------------------------------------------------------------------
+const _kTapsHapticStrength = 'taps_haptic_strength';
+const _kScrollHapticStrength = 'scroll_haptic_strength';
+const _kChimeHapticStrength = 'chime_haptic_strength';
+
+final tapsHapticStrengthProvider =
+    StateNotifierProvider<StringSettingNotifier, String?>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return StringSettingNotifier(
+    prefs: prefs,
+    key: _kTapsHapticStrength,
+    defaultValue: 'medium',
+  );
+});
+
+final scrollHapticStrengthProvider =
+    StateNotifierProvider<StringSettingNotifier, String?>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return StringSettingNotifier(
+    prefs: prefs,
+    key: _kScrollHapticStrength,
+    defaultValue: 'heavy', // Make default 'heavy' as request asked to increase dial haptics
+  );
+});
+
+final chimeHapticStrengthProvider =
+    StateNotifierProvider<StringSettingNotifier, String?>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return StringSettingNotifier(
+    prefs: prefs,
+    key: _kChimeHapticStrength,
+    defaultValue: 'medium',
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Selected chime type persistence ('dragon_studio_alert', 'notification_message_alert', etc.)
 // ---------------------------------------------------------------------------
 const _kSelectedChimeType = 'selected_chime_type';

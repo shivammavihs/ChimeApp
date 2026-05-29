@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
+import '../services/vibration_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_scale.dart';
 
@@ -216,7 +216,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                               if (_lastMin != val) {
                                 _lastMin = val;
                                 ref.read(intervalMinutesProvider.notifier).set(val);
-                                HapticFeedback.selectionClick();
+                                VibrationService.vibrateForScroll(ref.read(scrollHapticStrengthProvider) ?? 'heavy');
                               }
                             },
                           ),
@@ -244,7 +244,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                               if (_lastSec != val) {
                                 _lastSec = val;
                                 ref.read(intervalSecondsProvider.notifier).set(val);
-                                HapticFeedback.selectionClick();
+                                VibrationService.vibrateForScroll(ref.read(scrollHapticStrengthProvider) ?? 'heavy');
                               }
                             },
                           ),
@@ -272,7 +272,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                               if (_lastRep != val) {
                                 _lastRep = val;
                                 ref.read(totalRepsProvider.notifier).set(val);
-                                HapticFeedback.selectionClick();
+                                VibrationService.vibrateForScroll(ref.read(scrollHapticStrengthProvider) ?? 'heavy');
                               }
                             },
                             isReps: true,

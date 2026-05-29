@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'vibration_service.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -17,12 +17,18 @@ const int notificationId = 888;
 /// MethodChannel for native notification with PendingIntent action buttons.
 /// Registered on both the main engine (MainActivity) and the background
 /// service engine (TickrBackgroundService).
-const MethodChannel _nativeNotifChannel =
-    MethodChannel('com.chimeapp.chime_app/notification');
+
 
 @pragma('vm:entry-point')
 void onDidReceiveBackgroundNotificationResponse(NotificationResponse details) {
-  // No-op — notification actions are handled natively via BroadcastReceiver
+  final service = FlutterBackgroundService();
+  if (details.actionId == 'pause') {
+    service.invoke('notificationPause');
+  } else if (details.actionId == 'resume') {
+    service.invoke('notificationResume');
+  } else if (details.actionId == 'stop') {
+    service.invoke('notificationStop');
+  }
 }
 
 Future<void> initBackgroundService() async {
@@ -58,7 +64,7 @@ Future<void> initBackgroundService() async {
 
   // Initialize notifications (main isolate — for completion notification only)
   const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/launcher_icon');
   const InitializationSettings initializationSettings =
       InitializationSettings(android: initializationSettingsAndroid);
   await flutterLocalNotificationsPlugin.initialize(
@@ -108,10 +114,8 @@ void onStart(ServiceInstance service) async {
   bool isRunning = false;
 
   late final void Function() startLocalTimer;
-  late final Future<void> Function() checkPendingNotificationAction;
 
   // ── Initialize flutter_local_notifications in background isolate ──
-  // Only used for the "completed" notification, not for the timer notification.
   const AndroidNotificationChannel bgChannel = AndroidNotificationChannel(
     notificationChannelId,
     'tickr active timer',
@@ -126,10 +130,15 @@ void onStart(ServiceInstance service) async {
       ?.createNotificationChannel(bgChannel);
 
   const AndroidInitializationSettings bgInitAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/launcher_icon');
   const InitializationSettings bgInitSettings =
       InitializationSettings(android: bgInitAndroid);
-  await flutterLocalNotificationsPlugin.initialize(bgInitSettings);
+
+  // Initialize notifications registering our top-level Dart callback for actions
+  await flutterLocalNotificationsPlugin.initialize(
+    bgInitSettings,
+    onDidReceiveBackgroundNotificationResponse: onDidReceiveBackgroundNotificationResponse,
+  );
 
   // ── Timer control functions ──
 
@@ -144,20 +153,31 @@ void onStart(ServiceInstance service) async {
             ? 'Interval: $minutes:$seconds | Rep: $currentRep/$totalReps'
             : 'Paused | Rep: $currentRep/$totalReps';
 
-        // Use native MethodChannel to build notification with real PendingIntent
-        // action buttons. Falls back to flutter_local_notifications if unavailable.
+        final List<AndroidNotificationAction> actions = [];
+        if (isRunning) {
+          actions.add(const AndroidNotificationAction(
+            'pause',
+            'Pause',
+            showsUserInterface: false,
+            cancelNotification: false,
+          ));
+        } else {
+          actions.add(const AndroidNotificationAction(
+            'resume',
+            'Resume',
+            showsUserInterface: false,
+            cancelNotification: false,
+          ));
+        }
+        actions.add(const AndroidNotificationAction(
+          'stop',
+          'Stop',
+          showsUserInterface: false,
+          cancelNotification: false,
+        ));
+
         try {
-          await _nativeNotifChannel.invokeMethod('showTimerNotification', {
-            'notificationId': notificationId,
-            'channelId': notificationChannelId,
-            'title': titleText,
-            'body': statusText,
-            'isRunning': isRunning,
-          });
-        } catch (e) {
-          // Fallback: flutter_local_notifications (buttons may not be functional)
-          debugPrint('Native notification failed, using fallback: $e');
-          flutterLocalNotificationsPlugin.show(
+          await flutterLocalNotificationsPlugin.show(
             notificationId,
             titleText,
             statusText,
@@ -167,15 +187,18 @@ void onStart(ServiceInstance service) async {
                 'tickr active timer',
                 channelDescription: 'Displays tickr timer countdown in notification drawer.',
                 ongoing: true,
-                icon: '@mipmap/ic_launcher',
+                icon: '@mipmap/launcher_icon',
                 importance: Importance.low,
                 priority: Priority.low,
                 showWhen: false,
                 playSound: false,
                 enableVibration: false,
+                actions: actions,
               ),
             ),
           );
+        } catch (e) {
+          debugPrint('Error showing local notification: $e');
         }
       }
     }
@@ -190,8 +213,12 @@ void onStart(ServiceInstance service) async {
     try {
       await backgroundPlayer.stop();
       
+      // Read chime haptic strength dynamically from SharedPreferences in background
+      final prefs = await SharedPreferences.getInstance();
+      final chimeHapticStrength = prefs.getString('chime_haptic_strength') ?? 'medium';
+
       // Trigger vibration in the rhythm of the chime
-      VibrationService.vibrateForChime(selectedChimeType ?? 'dragon_studio_alert');
+      VibrationService.vibrateForChime(selectedChimeType ?? 'dragon_studio_alert', chimeHapticStrength);
 
       if (selectedChimeType == 'custom' && customSoundPath != null && File(customSoundPath!).existsSync()) {
         await backgroundPlayer.play(DeviceFileSource(customSoundPath!));
@@ -214,51 +241,11 @@ void onStart(ServiceInstance service) async {
     }
   }
 
-  // ── Poll for pending notification actions via native MethodChannel ──
-  // The native NotificationActionReceiver writes actions to SharedPreferences.
-  // The TickrBackgroundService's MethodChannel reads and clears them.
-  checkPendingNotificationAction = () async {
-    try {
-      final String? action =
-          await _nativeNotifChannel.invokeMethod<String>('consumePendingAction');
-      if (action == null || action.isEmpty) return;
-
-      if (action == 'pause') {
-        stopLocalTimer();
-        service.invoke('timerTick', {
-          'remainingSeconds': remainingSeconds,
-          'currentRep': currentRep,
-          'status': 'paused',
-        });
-        updateNotification();
-      } else if (action == 'resume') {
-        startLocalTimer();
-        updateNotification();
-      } else if (action == 'stop') {
-        stopLocalTimer();
-        flutterLocalNotificationsPlugin.cancel(notificationId);
-        service.invoke('timerTick', {
-          'remainingSeconds': 0,
-          'currentRep': 0,
-          'status': 'idle',
-        });
-        if (service is AndroidServiceInstance) {
-          service.stopSelf();
-        }
-      }
-    } catch (e) {
-      debugPrint('Error checking pending notification action: $e');
-    }
-  };
-
   startLocalTimer = () {
     ticker?.cancel();
     isRunning = true;
     ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!isRunning) return;
-
-      // Check for pending notification actions from native receiver
-      checkPendingNotificationAction();
 
       remainingSeconds--;
 
@@ -291,7 +278,7 @@ void onStart(ServiceInstance service) async {
                     'tickr_completed_channel',
                     'tickr Completed Alerts',
                     ongoing: false,
-                    icon: '@mipmap/ic_launcher',
+                    icon: '@mipmap/launcher_icon',
                     importance: Importance.low,
                     priority: Priority.low,
                     playSound: false,
@@ -316,13 +303,6 @@ void onStart(ServiceInstance service) async {
       }
     });
   };
-
-  // Poll for pending actions even when paused (no ticker running)
-  Timer.periodic(const Duration(milliseconds: 500), (_) {
-    if (!isRunning) {
-      checkPendingNotificationAction();
-    }
-  });
 
   // ── Service event listeners (from UI-side) ──
 

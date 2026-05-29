@@ -1,10 +1,11 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/timer_provider.dart';
+import '../providers/settings_provider.dart';
+import '../services/vibration_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_scale.dart';
 
@@ -113,16 +114,16 @@ class ControlBar extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // Large gradient START button
 // ---------------------------------------------------------------------------
-class _StartButton extends StatefulWidget {
+class _StartButton extends ConsumerStatefulWidget {
   const _StartButton({super.key, required this.label, required this.onTap});
   final String label;
   final VoidCallback onTap;
 
   @override
-  State<_StartButton> createState() => _StartButtonState();
+  ConsumerState<_StartButton> createState() => _StartButtonState();
 }
 
-class _StartButtonState extends State<_StartButton>
+class _StartButtonState extends ConsumerState<_StartButton>
     with TickerProviderStateMixin {
   late AnimationController _ctrl;
   late AnimationController _glowCtrl;
@@ -167,7 +168,7 @@ class _StartButtonState extends State<_StartButton>
       onTapDown: (_) => _ctrl.reverse(),
       onTapUp: (_) {
         _ctrl.forward();
-        HapticFeedback.mediumImpact();
+        VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
         widget.onTap();
       },
       onTapCancel: () => _ctrl.forward(),
@@ -342,7 +343,7 @@ class _GhostPillButton extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Base glass pill container
 // ---------------------------------------------------------------------------
-class _GlassPill extends StatefulWidget {
+class _GlassPill extends ConsumerStatefulWidget {
   const _GlassPill({
     required this.child,
     required this.onTap,
@@ -356,10 +357,10 @@ class _GlassPill extends StatefulWidget {
   final Color? borderColor;
 
   @override
-  State<_GlassPill> createState() => _GlassPillState();
+  ConsumerState<_GlassPill> createState() => _GlassPillState();
 }
 
-class _GlassPillState extends State<_GlassPill>
+class _GlassPillState extends ConsumerState<_GlassPill>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
@@ -389,7 +390,7 @@ class _GlassPillState extends State<_GlassPill>
       onTapDown: (_) => _ctrl.reverse(),
       onTapUp: (_) {
         _ctrl.forward();
-        HapticFeedback.mediumImpact();
+        VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
         widget.onTap();
       },
       onTapCancel: () => _ctrl.forward(),

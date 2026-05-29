@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
 
@@ -18,6 +17,7 @@ import '../widgets/countdown_display.dart';
 import '../widgets/input_panel.dart';
 import 'presets_screen.dart';
 import 'chimes_screen.dart';
+import 'haptics_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Home screen — dispatches to phone or tablet layout
@@ -42,9 +42,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       next.whenData((_) async {
         final selectedType = ref.read(selectedChimeTypeProvider) ?? 'dragon_studio_alert';
         final customPath = ref.read(customChimeSoundPathProvider);
+        final chimeHapticStrength = ref.read(chimeHapticStrengthProvider) ?? 'medium';
         
         // Trigger vibration in the rhythm of the chime
-        VibrationService.vibrateForChime(selectedType);
+        VibrationService.vibrateForChime(selectedType, chimeHapticStrength);
 
         if (selectedType == 'custom' && customPath != null && File(customPath).existsSync()) {
           await _audioPlayer.play(DeviceFileSource(customPath));
@@ -487,7 +488,7 @@ class _AppHeader extends ConsumerWidget {
               size: scale.sp(28),
             ),
             onPressed: () {
-              HapticFeedback.lightImpact();
+              VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
               onMenuPressed();
             },
           ),
@@ -515,6 +516,7 @@ class _TickrDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tapsHapticStrength = ref.watch(tapsHapticStrengthProvider) ?? 'medium';
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
     final screenHeight = mediaQuery.size.height;
@@ -588,6 +590,7 @@ class _TickrDrawer extends ConsumerWidget {
                             context,
                             icon: Icons.tune_rounded,
                             title: 'Presets',
+                            tapsHapticStrength: tapsHapticStrength,
                             onTap: () {
                               Navigator.pop(context); // Close drawer
                               Navigator.push(
@@ -600,11 +603,25 @@ class _TickrDrawer extends ConsumerWidget {
                             context,
                             icon: Icons.volume_up_rounded,
                             title: 'Chime Sounds',
+                            tapsHapticStrength: tapsHapticStrength,
                             onTap: () {
                               Navigator.pop(context); // Close drawer
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const ChimesScreen()),
+                              );
+                            },
+                          ),
+                          _buildDrawerItem(
+                            context,
+                            icon: Icons.vibration_rounded,
+                            title: 'Haptic Feedback',
+                            tapsHapticStrength: tapsHapticStrength,
+                            onTap: () {
+                              Navigator.pop(context); // Close drawer
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const HapticsScreen()),
                               );
                             },
                           ),
@@ -640,6 +657,7 @@ class _TickrDrawer extends ConsumerWidget {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    required String tapsHapticStrength,
   }) {
     final scale = ResponsiveScale.of(context);
 
@@ -648,7 +666,7 @@ class _TickrDrawer extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          HapticFeedback.lightImpact();
+          VibrationService.vibrateForTap(tapsHapticStrength);
           onTap();
         },
         child: Padding(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
+import '../services/vibration_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_scale.dart';
 import '../widgets/unified_wheel_picker.dart';
@@ -79,7 +79,7 @@ class _PresetsScreenState extends ConsumerState<PresetsScreen> {
                                 size: scale.sp(28),
                               ),
                               onPressed: () {
-                                HapticFeedback.lightImpact();
+                                VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                                 Navigator.pop(context);
                               },
                             ),
@@ -178,7 +178,7 @@ class _PresetsScreenState extends ConsumerState<PresetsScreen> {
                                     label = '${currentMin}m ${currentSec > 0 ? '${currentSec}s ' : ''}($currentRep\u00d7)';
                                   }
                                   
-                                  HapticFeedback.mediumImpact();
+                                  VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                                   ref.read(presetsProvider.notifier).addPreset(
                                     label: label,
                                     minutes: currentMin,
@@ -264,7 +264,7 @@ class _PresetsScreenState extends ConsumerState<PresetsScreen> {
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(16),
                                         onTap: () {
-                                          HapticFeedback.lightImpact();
+                                          VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                                           ref
                                               .read(intervalMinutesProvider.notifier)
                                               .set(preset.minutes);
@@ -330,7 +330,7 @@ class _PresetsScreenState extends ConsumerState<PresetsScreen> {
                                                   size: scale.sp(22),
                                                 ),
                                                 onPressed: () {
-                                                  HapticFeedback.mediumImpact();
+                                                  VibrationService.vibrateForTap(ref.read(tapsHapticStrengthProvider) ?? 'medium');
                                                   ref
                                                       .read(presetsProvider.notifier)
                                                       .deletePreset(preset.id);
