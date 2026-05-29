@@ -127,9 +127,10 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
             child: Stack(
               alignment: Alignment.center,
               children: [
+                // 1. Stationary Selection Underlines (Behind)
                 IgnorePointer(
                   child: SizedBox(
-                    height: 66 * scale.scaleFactor,
+                    height: 75 * scale.scaleFactor,
                     child: Row(
                       children: [
                         Expanded(
@@ -195,7 +196,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                         Colors.black,
                         Colors.black.withValues(alpha: 0.0),
                       ],
-                      stops: const [0.0, 0.22, 0.78, 1.0],
+                      stops: const [0.0, 0.22, 0.78, 1],
                     ).createShader(rect);
                   },
                   blendMode: BlendMode.dstIn,
@@ -278,6 +279,58 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                     ],
                   ),
                 ),
+
+                // 2. Stationary Faded Wet-Floor Reflections (In front of wheels, aligned to center baseline)
+                IgnorePointer(
+                  child: SizedBox(
+                    height: 105 * scale.scaleFactor, // Perfect pixel-perfect height offset for baseline alignment (no overlap)
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildStationaryReflection(
+                              scale: scale,
+                              val: currentMin,
+                            ),
+                          ),
+                          Opacity(
+                            opacity: 0,
+                            child: Text(
+                              ':',
+                              style: TextStyle(
+                                fontSize: 34 * scale.scaleFactor,
+                                fontWeight: FontWeight.w200,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildStationaryReflection(
+                              scale: scale,
+                              val: currentSec,
+                            ),
+                          ),
+                          Opacity(
+                            opacity: 0,
+                            child: Text(
+                              '×',
+                              style: TextStyle(
+                                fontSize: 30 * scale.scaleFactor,
+                                fontWeight: FontWeight.w200,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildStationaryReflection(
+                              scale: scale,
+                              val: currentRep,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -293,7 +346,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
           label.toUpperCase(),
           style: TextStyle(
             fontSize: scale.sp(12),
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             letterSpacing: scale.w(3.0),
             color: AppColors.textMuted.withValues(alpha: 0.85),
           ),
@@ -304,11 +357,54 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
 
   Widget _buildGradientLine(ResponsiveScale scale) {
     return Container(
-      width: scale.w(58),
-      height: 1.0,
+      width: scale.w(52),
+      height: 1,
       decoration: BoxDecoration(
         color: AppColors.accent.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(0.5),
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  Widget _buildStationaryReflection({
+    required ResponsiveScale scale,
+    required int val,
+  }) {
+    final textStr = val.toString().padLeft(2, '0');
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Opacity(
+        opacity: 0.25,
+        child: ShaderMask(
+          shaderCallback: (rect) {
+            return LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white,
+                Colors.white.withValues(alpha: 0.01),
+              ],
+              stops: const [0.0, 0.5],
+            ).createShader(rect);
+          },
+          blendMode: BlendMode.dstIn,
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..scale(1.0, -0.8)
+              ..translate(0.0, 0.0),
+            child: Text(
+              textStr,
+              style: TextStyle(
+                height: 1.0,
+                fontSize: 46 * scale.scaleFactor,
+                fontWeight: FontWeight.w400,
+                color: AppColors.selectedItem,
+                letterSpacing: -0.5 * scale.scaleFactor,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -327,8 +423,8 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
     return ListWheelScrollView.useDelegate(
       controller: controller,
       itemExtent: 52 * scale.scaleFactor,
-      perspective: 0.004,
-      diameterRatio: 1.8,
+      perspective: 0.01,
+      diameterRatio: 1.4,
       physics: const FixedExtentScrollPhysics(),
       onSelectedItemChanged: (index) {
         onChanged(index + minVal);
@@ -339,25 +435,31 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
           final itemVal = index + minVal;
           final isSelected = itemVal == currentVal;
 
+          final mainTextStyle = TextStyle(
+            height: 1.0,
+            fontSize: isSelected ? 46 * scale.scaleFactor : 42 * scale.scaleFactor,
+            fontWeight: isSelected ? FontWeight.w400 : FontWeight.w100,
+            color: isSelected
+                ? AppColors.selectedItem
+                : AppColors.unselectedItem.withValues(alpha: 0.4),
+            letterSpacing: -0.5 * scale.scaleFactor,
+            shadows: isSelected
+                ? [
+                    Shadow(
+                      color: AppColors.accent.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                    ),
+                  ]
+                : null,
+          );
+
+          final textStr = itemVal.toString().padLeft(2, '0');
+
           return Center(
+            key: ValueKey(itemVal),
             child: Text(
-              itemVal.toString().padLeft(2, '0'),
-              style: TextStyle(
-                fontSize: isSelected ? 48 * scale.scaleFactor : 32 * scale.scaleFactor,
-                fontWeight: isSelected ? FontWeight.w400 : FontWeight.w200,
-                color: isSelected
-                    ? AppColors.selectedItem
-                    : AppColors.unselectedItem.withValues(alpha: 0.5),
-                letterSpacing: -0.5 * scale.scaleFactor,
-                shadows: isSelected
-                    ? [
-                        Shadow(
-                          color: AppColors.accent.withValues(alpha: 0.35),
-                          blurRadius: 16,
-                        ),
-                      ]
-                    : null,
-              ),
+              textStr,
+              style: mainTextStyle,
             ),
           );
         },

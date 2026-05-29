@@ -98,7 +98,7 @@ class _ScrollOrInputPickerState extends State<ScrollOrInputPicker> {
     final theme = Theme.of(context);
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 3000),
       transitionBuilder: (child, anim) => ScaleTransition(
         scale: Tween<double>(begin: 0.92, end: 1.0).animate(anim),
         child: FadeTransition(opacity: anim, child: child),
