@@ -87,23 +87,40 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
     }
 
     return Container(
-      height: 220 * scale.scaleFactor,
       padding: EdgeInsets.symmetric(horizontal: scale.w(16)),
       child: Column(
         children: [
           // Column Headers (Labels)
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: scale.w(12)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildColumnLabel('Min', scale),
-                _buildColumnLabel('Sec', scale),
-                _buildColumnLabel('Reps', scale),
-              ],
-            ),
+          Row(
+            children: [
+              _buildColumnLabel('Min', scale),
+              // Colon spacing helper to match wheels row exactly
+              Opacity(
+                opacity: 0,
+                child: Text(
+                  ':',
+                  style: TextStyle(
+                    fontSize: 34 * scale.scaleFactor,
+                    fontWeight: FontWeight.w200,
+                  ),
+                ),
+              ),
+              _buildColumnLabel('Sec', scale),
+              // × spacing helper to match wheels row exactly
+              Opacity(
+                opacity: 0,
+                child: Text(
+                  '×',
+                  style: TextStyle(
+                    fontSize: 30 * scale.scaleFactor,
+                    fontWeight: FontWeight.w200,
+                  ),
+                ),
+              ),
+              _buildColumnLabel('Reps', scale),
+            ],
           ),
-          SizedBox(height: scale.h(12)),
+          SizedBox(height: scale.h(6)),
 
           // 3-Column Wheels Row
           Expanded(
@@ -112,14 +129,14 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
               children: [
                 IgnorePointer(
                   child: SizedBox(
-                    height: 52 * scale.scaleFactor,
+                    height: 66 * scale.scaleFactor,
                     child: Row(
                       children: [
                         Expanded(
                           child: Align(
                             alignment: Alignment.bottomCenter,
                             child: Padding(
-                              padding: EdgeInsets.only(bottom: 4 * scale.scaleFactor),
+                              padding: EdgeInsets.only(bottom: 2 * scale.scaleFactor),
                               child: _buildGradientLine(scale),
                             ),
                           ),
@@ -129,7 +146,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                           child: Text(
                             ':',
                             style: TextStyle(
-                              fontSize: 26 * scale.scaleFactor,
+                              fontSize: 34 * scale.scaleFactor,
                               fontWeight: FontWeight.w200,
                             ),
                           ),
@@ -138,7 +155,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                           child: Align(
                             alignment: Alignment.bottomCenter,
                             child: Padding(
-                              padding: EdgeInsets.only(bottom: 4 * scale.scaleFactor),
+                              padding: EdgeInsets.only(bottom: 2 * scale.scaleFactor),
                               child: _buildGradientLine(scale),
                             ),
                           ),
@@ -148,7 +165,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                           child: Text(
                             '×',
                             style: TextStyle(
-                              fontSize: 22 * scale.scaleFactor,
+                              fontSize: 30 * scale.scaleFactor,
                               fontWeight: FontWeight.w200,
                             ),
                           ),
@@ -157,7 +174,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                           child: Align(
                             alignment: Alignment.bottomCenter,
                             child: Padding(
-                              padding: EdgeInsets.only(bottom: 4 * scale.scaleFactor),
+                              padding: EdgeInsets.only(bottom: 2 * scale.scaleFactor),
                               child: _buildGradientLine(scale),
                             ),
                           ),
@@ -167,83 +184,99 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
                   ),
                 ),
 
-                Row(
-                  children: [
-                    // Minutes Wheel
-                    Expanded(
-                      child: _buildWheel(
-                        scale: scale,
-                        controller: _minController,
-                        currentVal: currentMin,
-                        minVal: 0,
-                        maxVal: 60,
-                        onChanged: (val) {
-                          if (_lastMin != val) {
-                            _lastMin = val;
-                            ref.read(intervalMinutesProvider.notifier).set(val);
-                            HapticFeedback.selectionClick();
-                          }
-                        },
+                ShaderMask(
+                  shaderCallback: (rect) {
+                    return LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.0),
+                        Colors.black,
+                        Colors.black,
+                        Colors.black.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.22, 0.78, 1.0],
+                    ).createShader(rect);
+                  },
+                  blendMode: BlendMode.dstIn,
+                  child: Row(
+                    children: [
+                      // Minutes Wheel
+                      Expanded(
+                        child: _buildWheel(
+                          scale: scale,
+                          controller: _minController,
+                          currentVal: currentMin,
+                          minVal: 0,
+                          maxVal: 60,
+                          onChanged: (val) {
+                            if (_lastMin != val) {
+                              _lastMin = val;
+                              ref.read(intervalMinutesProvider.notifier).set(val);
+                              HapticFeedback.selectionClick();
+                            }
+                          },
+                        ),
                       ),
-                    ),
 
-                    // Colon separator
-                    Text(
-                      ':',
-                      style: TextStyle(
-                        color: AppColors.selectedItem.withValues(alpha: 0.4),
-                        fontSize: 26 * scale.scaleFactor,
-                        fontWeight: FontWeight.w200,
+                      // Colon separator
+                      Text(
+                        ':',
+                        style: TextStyle(
+                          color: AppColors.selectedItem.withValues(alpha: 0.4),
+                          fontSize: 34 * scale.scaleFactor,
+                          fontWeight: FontWeight.w200,
+                        ),
                       ),
-                    ),
 
-                    // Seconds Wheel
-                    Expanded(
-                      child: _buildWheel(
-                        scale: scale,
-                        controller: _secController,
-                        currentVal: currentSec,
-                        minVal: 0,
-                        maxVal: 59,
-                        onChanged: (val) {
-                          if (_lastSec != val) {
-                            _lastSec = val;
-                            ref.read(intervalSecondsProvider.notifier).set(val);
-                            HapticFeedback.selectionClick();
-                          }
-                        },
+                      // Seconds Wheel
+                      Expanded(
+                        child: _buildWheel(
+                          scale: scale,
+                          controller: _secController,
+                          currentVal: currentSec,
+                          minVal: 0,
+                          maxVal: 59,
+                          onChanged: (val) {
+                            if (_lastSec != val) {
+                              _lastSec = val;
+                              ref.read(intervalSecondsProvider.notifier).set(val);
+                              HapticFeedback.selectionClick();
+                            }
+                          },
+                        ),
                       ),
-                    ),
 
-                    // Reps multiplier separator
-                    Text(
-                      '×',
-                      style: TextStyle(
-                        color: AppColors.selectedItem.withValues(alpha: 0.3),
-                        fontSize: 22 * scale.scaleFactor,
-                        fontWeight: FontWeight.w200,
+                      // Reps multiplier separator
+                      Text(
+                        '×',
+                        style: TextStyle(
+                          color: AppColors.selectedItem.withValues(alpha: 0.3),
+                          fontSize: 30 * scale.scaleFactor,
+                          fontWeight: FontWeight.w200,
+                        ),
                       ),
-                    ),
 
-                    // Repetitions Wheel
-                    Expanded(
-                      child: _buildWheel(
-                        scale: scale,
-                        controller: _repController,
-                        currentVal: currentRep,
-                        minVal: 1,
-                        maxVal: 99,
-                        onChanged: (val) {
-                          if (_lastRep != val) {
-                            _lastRep = val;
-                            ref.read(totalRepsProvider.notifier).set(val);
-                            HapticFeedback.selectionClick();
-                          }
-                        },
-                        isReps: true,
+                      // Repetitions Wheel
+                      Expanded(
+                        child: _buildWheel(
+                          scale: scale,
+                          controller: _repController,
+                          currentVal: currentRep,
+                          minVal: 1,
+                          maxVal: 99,
+                          onChanged: (val) {
+                            if (_lastRep != val) {
+                              _lastRep = val;
+                              ref.read(totalRepsProvider.notifier).set(val);
+                              HapticFeedback.selectionClick();
+                            }
+                          },
+                          isReps: true,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -259,7 +292,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
         child: Text(
           label.toUpperCase(),
           style: TextStyle(
-            fontSize: scale.sp(10),
+            fontSize: scale.sp(12),
             fontWeight: FontWeight.w600,
             letterSpacing: scale.w(3.0),
             color: AppColors.textMuted.withValues(alpha: 0.85),
@@ -271,19 +304,11 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
 
   Widget _buildGradientLine(ResponsiveScale scale) {
     return Container(
-      width: scale.w(38),
+      width: scale.w(58),
       height: 1.0,
       decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(0.5),
-        gradient: LinearGradient(
-          colors: [
-            AppColors.accent.withValues(alpha: 0.0),
-            AppColors.accent.withValues(alpha: 0.7),
-            AppColors.accent.withValues(alpha: 0.7),
-            AppColors.accent.withValues(alpha: 0.0),
-          ],
-          stops: const [0.0, 0.25, 0.75, 1.0],
-        ),
       ),
     );
   }
@@ -301,9 +326,9 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
 
     return ListWheelScrollView.useDelegate(
       controller: controller,
-      itemExtent: 46 * scale.scaleFactor,
-      perspective: 0.006,
-      diameterRatio: 1.1,
+      itemExtent: 52 * scale.scaleFactor,
+      perspective: 0.004,
+      diameterRatio: 1.8,
       physics: const FixedExtentScrollPhysics(),
       onSelectedItemChanged: (index) {
         onChanged(index + minVal);
@@ -318,7 +343,7 @@ class _UnifiedWheelPickerState extends ConsumerState<UnifiedWheelPicker> {
             child: Text(
               itemVal.toString().padLeft(2, '0'),
               style: TextStyle(
-                fontSize: isSelected ? 34 * scale.scaleFactor : 26 * scale.scaleFactor,
+                fontSize: isSelected ? 48 * scale.scaleFactor : 32 * scale.scaleFactor,
                 fontWeight: isSelected ? FontWeight.w400 : FontWeight.w200,
                 color: isSelected
                     ? AppColors.selectedItem

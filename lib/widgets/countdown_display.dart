@@ -56,9 +56,35 @@ class _CountdownDisplayState extends ConsumerState<CountdownDisplay>
     final state = ref.watch(timerProvider);
     final scale = ResponsiveScale.of(context);
 
-    return ProgressArc(
-      progress: state.intervalProgress,
-      size: widget.arcSize,
+    // Calculate dot progress (overall progress across all reps)
+    double dotProgress = 0.0;
+    if (state.isCompleted) {
+      dotProgress = 1.0;
+    } else if (!state.isIdle && state.totalReps > 0) {
+      dotProgress = (state.currentRep - 1 + state.intervalProgress) / state.totalReps;
+    }
+
+    final targetProgress = state.intervalProgress;
+    final targetDotProgress = dotProgress;
+
+    // Use TweenAnimationBuilder to animate dotProgress (overall rotating disc) smoothly.
+    // We animate at linear speed over 1 second (matching the 1-second timer ticker) for perfect continuity.
+    // If the timer is not running (e.g. idle/paused/completed), duration is zero for instant response.
+    final animateDuration = state.isRunning ? const Duration(seconds: 1) : Duration.zero;
+
+    return TweenAnimationBuilder<double>(
+      key: const ValueKey('dotProgressTween'),
+      tween: Tween<double>(begin: 0.0, end: targetDotProgress),
+      duration: animateDuration,
+      curve: Curves.linear,
+      builder: (context, animatedDotProgress, child) {
+        return ProgressArc(
+          progress: targetProgress,
+          dotProgress: animatedDotProgress,
+          size: widget.arcSize,
+          child: child!,
+        );
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

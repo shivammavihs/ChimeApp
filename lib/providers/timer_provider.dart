@@ -113,6 +113,8 @@ class ChimeTimerNotifier extends StateNotifier<ChimeState> {
 
       FlutterBackgroundService().on('timerCompleted').listen((event) {
         if (state.status != ChimeStatus.idle) {
+          // The chime was already played by the background service's backgroundPlayer
+          // when the final rep completed. We don't need to play it again in the foreground.
           _ticker?.cancel();
           state = state.copyWith(
             status: ChimeStatus.completed,
@@ -152,9 +154,16 @@ class ChimeTimerNotifier extends StateNotifier<ChimeState> {
     if (Platform.isAndroid || Platform.isIOS) {
       final service = FlutterBackgroundService();
       final isRunning = await service.isRunning();
-      if (!isRunning) {
-        await service.startService();
+      if (isRunning) {
+        // Stop any running service to ensure we boot a fresh instance running the latest code
+        service.invoke('stopTimer');
+        // Give the service a moment to stop and clean up
+        await Future.delayed(const Duration(milliseconds: 500));
       }
+      await service.startService();
+      // Give the background service isolate a moment to spin up and register its event listeners
+      await Future.delayed(const Duration(milliseconds: 800));
+      
       service.invoke('startTimer', {
         'intervalSeconds': intervalSecs,
         'totalReps': totalReps,

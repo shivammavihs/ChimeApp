@@ -127,7 +127,10 @@ class _PresetsScreenState extends ConsumerState<PresetsScreen> {
                           child: Column(
                             children: [
                               // The unified 3-column scroll picker from home screen
-                              const UnifiedWheelPicker(),
+                              SizedBox(
+                                height: scale.h(180),
+                                child: const UnifiedWheelPicker(),
+                              ),
                               
                               SizedBox(height: scale.h(16)),
                               

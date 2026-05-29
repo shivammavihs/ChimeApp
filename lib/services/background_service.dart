@@ -25,9 +25,22 @@ Future<void> initBackgroundService() async {
     enableVibration: false,
   );
 
+  const AndroidNotificationChannel completedChannel = AndroidNotificationChannel(
+    'tickr_completed_channel',
+    'tickr Completed Alerts',
+    description: 'Displays notification when tickr timer completes.',
+    importance: Importance.low,
+    playSound: false,
+    enableVibration: false,
+  );
+
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(channel);
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(completedChannel);
 
   // Initialize notifications
   const AndroidInitializationSettings initializationSettingsAndroid =
@@ -112,8 +125,9 @@ void onStart(ServiceInstance service) async {
     isRunning = false;
   }
 
-  void playChime() async {
+  Future<void> playChime() async {
     try {
+      await backgroundPlayer.stop();
       if (selectedChimeType == 'custom' && customSoundPath != null && File(customSoundPath!).existsSync()) {
         await backgroundPlayer.play(DeviceFileSource(customSoundPath!));
       } else {
@@ -153,32 +167,48 @@ void onStart(ServiceInstance service) async {
       updateNotification();
 
       if (remainingSeconds <= 0) {
-        playChime();
         currentRep++;
+        // Play chime for EVERY completed interval — final or not.
+        // Fire-and-forget: the async work runs on the event loop while we
+        // handle state transitions synchronously below.
+        playChime();
 
         if (currentRep > totalReps) {
+          // All reps done — kill the ticker synchronously so it can't
+          // re-enter and call backgroundPlayer.stop() (inside playChime),
+          // which would kill the chime that's currently playing.
           stopLocalTimer();
-          service.invoke('timerCompleted');
-          
-          if (service is AndroidServiceInstance) {
-            flutterLocalNotificationsPlugin.show(
-              notificationId,
-              'tickr Completed!',
-              'All $totalReps repetitions completed.',
-              const NotificationDetails(
-                android: AndroidNotificationDetails(
-                  notificationChannelId,
-                  'tickr active timer',
-                  ongoing: false,
-                  icon: '@mipmap/ic_launcher',
-                  importance: Importance.high,
-                  priority: Priority.high,
+
+          // Give the chime a moment to be audible before transitioning UI
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            service.invoke('timerCompleted');
+
+            if (service is AndroidServiceInstance) {
+              flutterLocalNotificationsPlugin.show(
+                889,
+                'tickr Completed!',
+                'All $totalReps repetitions completed.',
+                const NotificationDetails(
+                  android: AndroidNotificationDetails(
+                    'tickr_completed_channel',
+                    'tickr Completed Alerts',
+                    ongoing: false,
+                    icon: '@mipmap/ic_launcher',
+                    importance: Importance.low,
+                    priority: Priority.low,
+                    playSound: false,
+                    enableVibration: false,
+                  ),
                 ),
-              ),
-            );
-            service.stopSelf();
-          }
+              );
+              // Keep the service alive so the chime finishes playing
+              Future.delayed(const Duration(seconds: 5), () {
+                service.stopSelf();
+              });
+            }
+          });
         } else {
+          // Next repetition
           remainingSeconds = intervalSeconds;
           service.invoke('timerTick', {
             'remainingSeconds': remainingSeconds,

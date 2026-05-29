@@ -248,25 +248,29 @@ class PresetsNotifier extends StateNotifier<List<ChimePreset>> {
 
   static List<ChimePreset> _loadPresets(SharedPreferences prefs) {
     final list = prefs.getStringList(_kPresets);
+    final defaultPresets = [
+      ChimePreset(id: '1', label: '1m (5x)', minutes: 1, seconds: 0, reps: 5),
+      ChimePreset(id: '2', label: '3m (5x)', minutes: 3, seconds: 0, reps: 5),
+      ChimePreset(id: '3', label: '5m (10x)', minutes: 5, seconds: 0, reps: 10),
+      ChimePreset(id: '4', label: '10m (10x)', minutes: 10, seconds: 0, reps: 10),
+      ChimePreset(id: '5', label: '15m (15x)', minutes: 15, seconds: 0, reps: 15),
+    ];
     if (list == null) {
-      // Seed default initial presets matching previous design
-      return [
-        ChimePreset(id: '1', label: '1m (5x)', minutes: 1, seconds: 0, reps: 5),
-        ChimePreset(id: '2', label: '3m (5x)', minutes: 3, seconds: 0, reps: 5),
-        ChimePreset(id: '3', label: '5m (10x)', minutes: 5, seconds: 0, reps: 10),
-      ];
+      return defaultPresets;
     }
     try {
-      return list
+      final parsed = list
           .map((str) => ChimePreset.fromJson(json.decode(str) as Map<String, dynamic>))
           .toList();
+      // If the user only has the original 3 defaults, upgrade them to the new 5 defaults
+      if (parsed.length == 3 &&
+          parsed[0].label == '1m (5x)' &&
+          parsed[2].label == '5m (10x)') {
+        return defaultPresets;
+      }
+      return parsed;
     } catch (e) {
-      // Fallback on corrupt data
-      return [
-        ChimePreset(id: '1', label: '1m (5x)', minutes: 1, seconds: 0, reps: 5),
-        ChimePreset(id: '2', label: '3m (5x)', minutes: 3, seconds: 0, reps: 5),
-        ChimePreset(id: '3', label: '5m (10x)', minutes: 5, seconds: 0, reps: 10),
-      ];
+      return defaultPresets;
     }
   }
 
