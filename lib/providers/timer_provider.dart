@@ -96,6 +96,18 @@ class ChimeTimerNotifier extends StateNotifier<ChimeState> {
           final rep = event['currentRep'] as int;
           final statusStr = event['status'] as String;
 
+          if (statusStr == 'idle') {
+            _ticker?.cancel();
+            state = ChimeState(
+              status: ChimeStatus.idle,
+              remainingSeconds: 0,
+              currentRep: 0,
+              totalReps: state.totalReps,
+              intervalSeconds: state.intervalSeconds,
+            );
+            return;
+          }
+
           ChimeStatus status = ChimeStatus.running;
           if (statusStr == 'paused') {
             status = ChimeStatus.paused;

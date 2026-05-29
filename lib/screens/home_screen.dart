@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/settings_provider.dart';
 import '../providers/timer_provider.dart';
+import '../services/vibration_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_scale.dart';
 import '../widgets/control_bar.dart';
@@ -42,6 +43,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final selectedType = ref.read(selectedChimeTypeProvider) ?? 'dragon_studio_alert';
         final customPath = ref.read(customChimeSoundPathProvider);
         
+        // Trigger vibration in the rhythm of the chime
+        VibrationService.vibrateForChime(selectedType);
+
         if (selectedType == 'custom' && customPath != null && File(customPath).existsSync()) {
           await _audioPlayer.play(DeviceFileSource(customPath));
         } else {
@@ -480,7 +484,7 @@ class _AppHeader extends ConsumerWidget {
             icon: Icon(
               Icons.menu_rounded,
               color: AppColors.textPrimary.withValues(alpha: 0.5),
-              size: scale.sp(22),
+              size: scale.sp(28),
             ),
             onPressed: () {
               HapticFeedback.lightImpact();
@@ -491,7 +495,7 @@ class _AppHeader extends ConsumerWidget {
             'TICKR',
             style: TextStyle(
               color: AppColors.textPrimary.withValues(alpha: 0.8),
-              fontSize: scale.sp(15),
+              fontSize: scale.sp(19),
               letterSpacing: scale.w(10.0),
               fontWeight: FontWeight.w300,
             ),
@@ -609,7 +613,7 @@ class _TickrDrawer extends ConsumerWidget {
 
                           Center(
                             child: Text(
-                              'v1.0.0 • Premium Dark Timer',
+                              'v1.0.0 • T I C K R',
                               style: TextStyle(
                                 color: AppColors.textDisabled,
                                 fontSize: scale.sp(10),

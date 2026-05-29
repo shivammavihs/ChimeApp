@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'vibration_service.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -12,7 +14,19 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 const String notificationChannelId = 'tickr_timer_channel';
 const int notificationId = 888;
 
+/// MethodChannel for native notification with PendingIntent action buttons.
+/// Registered on both the main engine (MainActivity) and the background
+/// service engine (TickrBackgroundService).
+const MethodChannel _nativeNotifChannel =
+    MethodChannel('com.chimeapp.chime_app/notification');
+
+@pragma('vm:entry-point')
+void onDidReceiveBackgroundNotificationResponse(NotificationResponse details) {
+  // No-op — notification actions are handled natively via BroadcastReceiver
+}
+
 Future<void> initBackgroundService() async {
+
   final service = FlutterBackgroundService();
 
   // Create notifications channel for Android
@@ -20,7 +34,7 @@ Future<void> initBackgroundService() async {
     notificationChannelId,
     'tickr active timer',
     description: 'Displays tickr timer countdown in notification drawer.',
-    importance: Importance.low, // low importance so it ticks silently without chiming on every tick
+    importance: Importance.low,
     playSound: false,
     enableVibration: false,
   );
@@ -42,17 +56,21 @@ Future<void> initBackgroundService() async {
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(completedChannel);
 
-  // Initialize notifications
+  // Initialize notifications (main isolate — for completion notification only)
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const InitializationSettings initializationSettings =
       InitializationSettings(android: initializationSettingsAndroid);
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse details) {},
+    onDidReceiveBackgroundNotificationResponse: onDidReceiveBackgroundNotificationResponse,
+  );
 
   await service.configure(
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
-      autoStart: false, // Start manually when user clicks START
+      autoStart: false,
       isForegroundMode: true,
       notificationChannelId: notificationChannelId,
       initialNotificationTitle: 'tickr Timer',
@@ -89,33 +107,76 @@ void onStart(ServiceInstance service) async {
   Timer? ticker;
   bool isRunning = false;
 
+  late final void Function() startLocalTimer;
+  late final Future<void> Function() checkPendingNotificationAction;
+
+  // ── Initialize flutter_local_notifications in background isolate ──
+  // Only used for the "completed" notification, not for the timer notification.
+  const AndroidNotificationChannel bgChannel = AndroidNotificationChannel(
+    notificationChannelId,
+    'tickr active timer',
+    description: 'Displays tickr timer countdown in notification drawer.',
+    importance: Importance.low,
+    playSound: false,
+    enableVibration: false,
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(bgChannel);
+
+  const AndroidInitializationSettings bgInitAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings bgInitSettings =
+      InitializationSettings(android: bgInitAndroid);
+  await flutterLocalNotificationsPlugin.initialize(bgInitSettings);
+
+  // ── Timer control functions ──
+
   Future<void> updateNotification() async {
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
         final minutes = (remainingSeconds / 60).floor().toString().padLeft(2, '0');
         final seconds = (remainingSeconds % 60).toString().padLeft(2, '0');
-        
-        final String statusText = 'Interval: $minutes:$seconds | Rep: $currentRep/$totalReps';
-        
-        flutterLocalNotificationsPlugin.show(
-          notificationId,
-          'tickr Timer running',
-          statusText,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              notificationChannelId,
-              'tickr active timer',
-              channelDescription: 'Displays tickr timer countdown in notification drawer.',
-              ongoing: true,
-              icon: '@mipmap/ic_launcher',
-              importance: Importance.low,
-              priority: Priority.low,
-              showWhen: false,
-              playSound: false,
-              enableVibration: false,
+
+        final String titleText = isRunning ? 'tickr Timer running' : 'tickr Timer paused';
+        final String statusText = isRunning
+            ? 'Interval: $minutes:$seconds | Rep: $currentRep/$totalReps'
+            : 'Paused | Rep: $currentRep/$totalReps';
+
+        // Use native MethodChannel to build notification with real PendingIntent
+        // action buttons. Falls back to flutter_local_notifications if unavailable.
+        try {
+          await _nativeNotifChannel.invokeMethod('showTimerNotification', {
+            'notificationId': notificationId,
+            'channelId': notificationChannelId,
+            'title': titleText,
+            'body': statusText,
+            'isRunning': isRunning,
+          });
+        } catch (e) {
+          // Fallback: flutter_local_notifications (buttons may not be functional)
+          debugPrint('Native notification failed, using fallback: $e');
+          flutterLocalNotificationsPlugin.show(
+            notificationId,
+            titleText,
+            statusText,
+            NotificationDetails(
+              android: AndroidNotificationDetails(
+                notificationChannelId,
+                'tickr active timer',
+                channelDescription: 'Displays tickr timer countdown in notification drawer.',
+                ongoing: true,
+                icon: '@mipmap/ic_launcher',
+                importance: Importance.low,
+                priority: Priority.low,
+                showWhen: false,
+                playSound: false,
+                enableVibration: false,
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     }
   }
@@ -128,6 +189,10 @@ void onStart(ServiceInstance service) async {
   Future<void> playChime() async {
     try {
       await backgroundPlayer.stop();
+      
+      // Trigger vibration in the rhythm of the chime
+      VibrationService.vibrateForChime(selectedChimeType ?? 'dragon_studio_alert');
+
       if (selectedChimeType == 'custom' && customSoundPath != null && File(customSoundPath!).existsSync()) {
         await backgroundPlayer.play(DeviceFileSource(customSoundPath!));
       } else {
@@ -149,11 +214,51 @@ void onStart(ServiceInstance service) async {
     }
   }
 
-  void startLocalTimer() {
+  // ── Poll for pending notification actions via native MethodChannel ──
+  // The native NotificationActionReceiver writes actions to SharedPreferences.
+  // The TickrBackgroundService's MethodChannel reads and clears them.
+  checkPendingNotificationAction = () async {
+    try {
+      final String? action =
+          await _nativeNotifChannel.invokeMethod<String>('consumePendingAction');
+      if (action == null || action.isEmpty) return;
+
+      if (action == 'pause') {
+        stopLocalTimer();
+        service.invoke('timerTick', {
+          'remainingSeconds': remainingSeconds,
+          'currentRep': currentRep,
+          'status': 'paused',
+        });
+        updateNotification();
+      } else if (action == 'resume') {
+        startLocalTimer();
+        updateNotification();
+      } else if (action == 'stop') {
+        stopLocalTimer();
+        flutterLocalNotificationsPlugin.cancel(notificationId);
+        service.invoke('timerTick', {
+          'remainingSeconds': 0,
+          'currentRep': 0,
+          'status': 'idle',
+        });
+        if (service is AndroidServiceInstance) {
+          service.stopSelf();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking pending notification action: $e');
+    }
+  };
+
+  startLocalTimer = () {
     ticker?.cancel();
     isRunning = true;
     ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!isRunning) return;
+
+      // Check for pending notification actions from native receiver
+      checkPendingNotificationAction();
 
       remainingSeconds--;
 
@@ -168,18 +273,11 @@ void onStart(ServiceInstance service) async {
 
       if (remainingSeconds <= 0) {
         currentRep++;
-        // Play chime for EVERY completed interval — final or not.
-        // Fire-and-forget: the async work runs on the event loop while we
-        // handle state transitions synchronously below.
         playChime();
 
         if (currentRep > totalReps) {
-          // All reps done — kill the ticker synchronously so it can't
-          // re-enter and call backgroundPlayer.stop() (inside playChime),
-          // which would kill the chime that's currently playing.
           stopLocalTimer();
 
-          // Give the chime a moment to be audible before transitioning UI
           Future.delayed(const Duration(milliseconds: 1500), () {
             service.invoke('timerCompleted');
 
@@ -201,14 +299,12 @@ void onStart(ServiceInstance service) async {
                   ),
                 ),
               );
-              // Keep the service alive so the chime finishes playing
               Future.delayed(const Duration(seconds: 5), () {
                 service.stopSelf();
               });
             }
           });
         } else {
-          // Next repetition
           remainingSeconds = intervalSeconds;
           service.invoke('timerTick', {
             'remainingSeconds': remainingSeconds,
@@ -219,7 +315,16 @@ void onStart(ServiceInstance service) async {
         }
       }
     });
-  }
+  };
+
+  // Poll for pending actions even when paused (no ticker running)
+  Timer.periodic(const Duration(milliseconds: 500), (_) {
+    if (!isRunning) {
+      checkPendingNotificationAction();
+    }
+  });
+
+  // ── Service event listeners (from UI-side) ──
 
   service.on('startTimer').listen((event) {
     if (event != null) {
@@ -227,10 +332,10 @@ void onStart(ServiceInstance service) async {
       totalReps = event['totalReps'] as int;
       customSoundPath = event['customChimeSoundPath'] as String?;
       selectedChimeType = event['selectedChimeType'] as String? ?? 'dragon_studio_alert';
-      
+
       remainingSeconds = intervalSeconds;
       currentRep = 1;
-      
+
       startLocalTimer();
       updateNotification();
     }
@@ -243,14 +348,45 @@ void onStart(ServiceInstance service) async {
       'currentRep': currentRep,
       'status': 'paused',
     });
+    updateNotification();
   });
 
   service.on('resumeTimer').listen((event) {
     startLocalTimer();
+    updateNotification();
   });
 
   service.on('stopTimer').listen((event) {
     stopLocalTimer();
+    if (service is AndroidServiceInstance) {
+      service.stopSelf();
+    }
+  });
+
+  // Legacy listeners for backward compatibility
+  service.on('notificationPause').listen((event) {
+    stopLocalTimer();
+    service.invoke('timerTick', {
+      'remainingSeconds': remainingSeconds,
+      'currentRep': currentRep,
+      'status': 'paused',
+    });
+    updateNotification();
+  });
+
+  service.on('notificationResume').listen((event) {
+    startLocalTimer();
+    updateNotification();
+  });
+
+  service.on('notificationStop').listen((event) {
+    stopLocalTimer();
+    flutterLocalNotificationsPlugin.cancel(notificationId);
+    service.invoke('timerTick', {
+      'remainingSeconds': 0,
+      'currentRep': 0,
+      'status': 'idle',
+    });
     if (service is AndroidServiceInstance) {
       service.stopSelf();
     }

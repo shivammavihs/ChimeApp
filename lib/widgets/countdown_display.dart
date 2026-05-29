@@ -81,6 +81,7 @@ class _CountdownDisplayState extends ConsumerState<CountdownDisplay>
         return ProgressArc(
           progress: targetProgress,
           dotProgress: animatedDotProgress,
+          isCompleted: state.isCompleted,
           size: widget.arcSize,
           child: child!,
         );
@@ -92,18 +93,17 @@ class _CountdownDisplayState extends ConsumerState<CountdownDisplay>
           AnimatedBuilder(
             animation: _flashColor,
             builder: (context, _) {
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, anim) =>
-                    FadeTransition(opacity: anim, child: child),
-                child: Text(
-                  key: ValueKey(state.remainingSeconds),
-                  _formatTime(state),
-                  style: _timerTextStyle(context, widget.arcSize, scale).copyWith(
-                    color: state.isCompleted
-                        ? AppColors.success
-                        : _flashColor.value,
-                  ),
+              final style = _timerTextStyle(context, widget.arcSize, scale).copyWith(
+                color: state.isCompleted
+                    ? AppColors.success
+                    : _flashColor.value,
+              );
+              return Text(
+                _formatTime(state),
+                style: style,
+                strutStyle: StrutStyle(
+                  fontSize: style.fontSize,
+                  forceStrutHeight: true,
                 ),
               );
             },
@@ -168,16 +168,25 @@ class _StatusBadge extends StatelessWidget {
       child: Column(
         key: ValueKey('${state.status}-${state.currentRep}'),
         children: [
-          if (state.isRunning || state.isPaused) ...[
-            Text(
-              'REP ${state.currentRep} OF ${state.totalReps}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontSize: (theme.textTheme.titleMedium?.fontSize ?? 11) * scale.scaleFactor,
-                letterSpacing: (theme.textTheme.titleMedium?.letterSpacing ?? 2.0) * scale.scaleFactor,
-              ),
+          Visibility(
+            visible: state.isRunning || state.isPaused,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'REP ${state.currentRep} OF ${state.totalReps}',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: (theme.textTheme.titleMedium?.fontSize ?? 11) * scale.scaleFactor,
+                    letterSpacing: (theme.textTheme.titleMedium?.letterSpacing ?? 2.0) * scale.scaleFactor,
+                  ),
+                ),
+                SizedBox(height: scale.h(6)),
+              ],
             ),
-            SizedBox(height: scale.h(6)),
-          ],
+          ),
           Container(
             padding: EdgeInsets.symmetric(
               horizontal: scale.w(14),

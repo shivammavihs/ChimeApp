@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../providers/settings_provider.dart';
+import '../services/vibration_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/responsive_scale.dart';
 import 'home_screen.dart'; // import to reuse BackgroundGlow
@@ -29,6 +30,9 @@ class _ChimesScreenState extends ConsumerState<ChimesScreen> {
 
   void _previewSound(String key, String? customPath) async {
     try {
+      // Trigger vibration in the rhythm of the chime
+      VibrationService.vibrateForChime(key);
+
       if (key == 'custom' && customPath != null && File(customPath).existsSync()) {
         await _previewPlayer.play(DeviceFileSource(customPath));
       } else {

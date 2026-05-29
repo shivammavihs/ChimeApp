@@ -18,7 +18,7 @@ class InputPanel extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.max,
       children: [
-        SizedBox(height: scale.h(8)),
+        SizedBox(height: scale.h(24)),
         Text(
           'SET INTERVAL',
           style: TextStyle(
@@ -28,7 +28,7 @@ class InputPanel extends ConsumerWidget {
             color: Colors.white.withValues(alpha: 0.35),
           ),
         ),
-        SizedBox(height: scale.h(16)),
+        SizedBox(height: scale.h(22)),
 
         // The unified 3-column scroll picker
         const Expanded(child: UnifiedWheelPicker()),
@@ -57,7 +57,7 @@ class InputPanel extends ConsumerWidget {
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: scale.h(8)),
                   child: Text(
-                    'No presets yet — add from Options',
+                    'No saved presets — add from Options',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.2),
                       fontSize: scale.sp(12),

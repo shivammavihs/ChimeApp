@@ -33,9 +33,9 @@
             </intent-filter>
         </activity>
 
-        <!-- flutter_background_service foreground service -->
+        <!-- Custom background service with MethodChannel for native notification actions -->
         <service
-            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:name=".TickrBackgroundService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="true" />
 
@@ -44,6 +44,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Native BroadcastReceiver for notification action buttons (Pause/Resume/Stop) -->
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:exported="false" />
     </application>
 
     <queries>

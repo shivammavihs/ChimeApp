@@ -13,6 +13,7 @@ class ProgressArc extends StatelessWidget {
     required this.progress,
     required this.dotProgress,
     required this.child,
+    required this.isCompleted,
     this.size = 280,
     this.strokeWidth = 3.0,
   });
@@ -26,6 +27,7 @@ class ProgressArc extends StatelessWidget {
   final Widget child;
   final double size;
   final double strokeWidth;
+  final bool isCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +44,7 @@ class ProgressArc extends StatelessWidget {
               progress: progress,
               dotProgress: dotProgress,
               strokeWidth: strokeWidth,
+              isCompleted: isCompleted,
             ),
           ),
           // Content in center
@@ -60,11 +63,13 @@ class _ArcPainter extends CustomPainter {
     required this.progress,
     required this.dotProgress,
     required this.strokeWidth,
+    required this.isCompleted,
   });
 
   final double progress;
   final double dotProgress;
   final double strokeWidth;
+  final bool isCompleted;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -73,24 +78,26 @@ class _ArcPainter extends CustomPainter {
 
     // 1. Beautiful rotating sweep gradient disc representing overall progress (drawn first as background)
     // Touches the outer circle (uses radius) and has a perfectly sharp leading radial edge.
-    final rotationAngle = 2 * math.pi * dotProgress.clamp(0.0, 1.0);
-    final discPaint = Paint()
-      ..shader = SweepGradient(
-        center: Alignment.center,
-        startAngle: 0.0,
-        endAngle: 2 * math.pi,
-        colors: [
-          AppColors.primary.withValues(alpha: 0.01),
-          AppColors.primaryLight.withValues(alpha: 0.12),
-          AppColors.accent.withValues(alpha: 0.35),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.6, 0.999, 1.0],
-        transform: GradientRotation(-math.pi / 2 + rotationAngle),
-      ).createShader(Rect.fromCircle(center: center, radius: radius))
-      ..style = PaintingStyle.fill;
+    if (!isCompleted) {
+      final rotationAngle = 2 * math.pi * dotProgress.clamp(0.0, 1.0);
+      final discPaint = Paint()
+        ..shader = SweepGradient(
+          center: Alignment.center,
+          startAngle: 0.0,
+          endAngle: 2 * math.pi,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.03),
+            AppColors.primaryLight.withValues(alpha: 0.1),
+            AppColors.accent.withValues(alpha: 0.25),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.6, 0.999, 1.0],
+          transform: GradientRotation(-math.pi / 2 + rotationAngle),
+        ).createShader(Rect.fromCircle(center: center, radius: radius))
+        ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(center, radius, discPaint);
+      canvas.drawCircle(center, radius, discPaint);
+    }
 
     // 2. Outer track ring (for current rep progress)
     final trackPaint = Paint()
@@ -145,5 +152,7 @@ class _ArcPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ArcPainter old) =>
-      old.progress != progress || old.dotProgress != dotProgress;
+      old.progress != progress ||
+      old.dotProgress != dotProgress ||
+      old.isCompleted != isCompleted;
 }
