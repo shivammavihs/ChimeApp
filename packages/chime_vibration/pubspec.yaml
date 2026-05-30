@@ -1,0 +1,19 @@
+name: chime_vibration
+description: Custom native vibration plugin for the Chime App to support background vibration.
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.chimeapp.chime_vibration
+        pluginClass: ChimeVibrationPlugin
